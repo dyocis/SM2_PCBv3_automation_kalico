@@ -51,4 +51,6 @@ jobs:
       - name: Test opt-in I2C reporting and legacy error behavior
         env:
           CC: gcc
-        run: python3 scripts/test_sm2_i2c.py
+        run: |
+          python3 scripts/test_sm2_i2c.py
+          python3 scripts/test_sm2_bme280.py

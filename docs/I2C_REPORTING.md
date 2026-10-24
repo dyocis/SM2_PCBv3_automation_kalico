@@ -45,6 +45,23 @@ an existing output. It does not install, build or flash firmware.
 
 ## Remaining integration work
 
+An uninstalled `sm2_bme280.py` prototype registers the separate `SM2_BME280`
+factory for ambient `temperature_sensor` sections only. It subclasses the
+pinned Kalico BME280 implementation for calibration and compensation, routes
+initialization and sampling through the reporting adapter, checks chip ID,
+bounds initialization waits and consecutive retries, and exposes `valid`,
+sample age, error and restart-required state. Invalid/stale numeric fields are
+`None`, not zero. MCU reconnect is latched until host restart. Configured
+temperature limits still invoke shutdown. Tests load the actual pinned base
+driver fixture, including its initializer and Bosch reference compensation.
+
+This driver is not yet suitable for enabling: existing SGP40 compensation,
+macros and dashboard consumers must handle invalid/`None` readings first.
+The fixture `tests/fixtures/kalico_bme280.py` is the unmodified
+`klippy/extras/bme280.py` from the pinned commit above; its upstream copyright
+and GPL notice are retained. Runtime compatibility with other base-driver
+revisions has not been established.
+
 - Route all opted-in SGP40/BME280 operations, including initialization and
   buffered writes, through this adapter. Ordinary sensor instances must keep
   their original transport.
