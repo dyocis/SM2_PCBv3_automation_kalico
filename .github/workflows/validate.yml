@@ -47,3 +47,8 @@ jobs:
 
       - name: Validate repository content
         run: python3 scripts/validate_repo.py
+
+      - name: Test opt-in I2C reporting and legacy error behavior
+        env:
+          CC: gcc
+        run: python3 scripts/test_sm2_i2c.py
