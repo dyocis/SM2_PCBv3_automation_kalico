@@ -22,6 +22,7 @@ class TransportTests(unittest.TestCase):
         self.callbacks = []
         self.reply = dict(oid=7, status=0, response=b"abc")
         self.mcu = SimpleNamespace(is_non_critical=True,
+                                  get_printer=lambda: SimpleNamespace(command_error=TimeoutError),
                                   non_critical_disconnected=False,
                                   _reconnecting=False,
                                   register_config_callback=self.callbacks.append,
@@ -66,8 +67,26 @@ class TransportTests(unittest.TestCase):
         with self.assertRaises(transport.SM2I2CError):
             self.adapter.i2c_write([1])
 
+    def test_query_timeout_becomes_sensor_error_without_retry(self):
+        calls = []
+        def timeout(*args, **kwargs):
+            calls.append(kwargs)
+            raise TimeoutError("Timeout on wait for response")
+        self.adapter.command.send = timeout
+        with self.assertRaisesRegex(transport.SM2I2CError, "query failed"):
+            self.adapter.i2c_write([1])
+        self.assertEqual(len(calls), 1)
+        self.assertFalse(calls[0]["retry"])
+
+    def test_programming_errors_are_not_hidden_as_bus_failures(self):
+        def bad_call(*args, **kwargs):
+            raise TypeError("unexpected programming error")
+        self.adapter.command.send = bad_call
+        with self.assertRaises(TypeError):
+            self.adapter.i2c_write([1])
+
     def test_short_or_wrong_device_reply_is_invalid(self):
-        for reply in (dict(oid=7, status=0, response=b"a"),
+        for reply in (None, dict(oid=7, status=0, response=b"a"),
                       dict(oid=8, status=0, response=b"abc"),
                       dict(oid=7, status=0, response=None)):
             self.reply = reply

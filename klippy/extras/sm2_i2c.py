@@ -24,6 +24,7 @@ class SM2I2CReport:
     def __init__(self, i2c):
         self.i2c = i2c
         self.mcu = i2c.get_mcu()
+        self.command_error = self.mcu.get_printer().command_error
         self.i2c_address = i2c.get_i2c_address()
         if not getattr(self.mcu, "is_non_critical", False):
             raise SM2I2CError("SM2 reporting requires a non-critical MCU")
@@ -59,13 +60,16 @@ class SM2I2CReport:
                 or len(data) > MAX_LENGTH or not (data or read_len)):
             raise SM2I2CError("Invalid SM2 I2C transfer length")
         # No automatic replay: writes can start measurements/reset sensors.
-        reply = self.command.send([self.get_oid(), data, read_len],
-                                  minclock=minclock, reqclock=reqclock,
-                                  retry=False)
+        try:
+            reply = self.command.send([self.get_oid(), data, read_len],
+                                      minclock=minclock, reqclock=reqclock,
+                                      retry=False)
+        except self.command_error as exc:
+            raise SM2I2CError("SM2 I2C query failed: %s" % exc) from exc
         if (self.mcu.non_critical_disconnected
                 or getattr(self.mcu, "_reconnecting", False)):
             raise SM2I2CError("SM2 disconnected during I2C transaction")
-        if reply.get("oid") != self.get_oid():
+        if not isinstance(reply, dict) or reply.get("oid") != self.get_oid():
             raise SM2I2CError("Invalid SM2 I2C response OID")
         status = reply.get("status")
         if status != 0:
