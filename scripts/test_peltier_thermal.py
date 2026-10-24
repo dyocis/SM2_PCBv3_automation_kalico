@@ -2,6 +2,7 @@
 """Printer-free Klipper/Jinja Peltier safety tests."""
 
 import re
+import shlex
 import unittest
 from pathlib import Path
 from jinja2 import Environment, StrictUndefined
@@ -9,7 +10,7 @@ from jinja2 import Environment, StrictUndefined
 SOURCE = (Path(__file__).resolve().parents[1] / "config/SM2_Control.cfg").read_text()
 SECTIONS = re.findall(
     r"^\[(?:gcode_macro|delayed_gcode) ([^]]+)\]\s*\n(.*?)(?=^\[|\Z)",
-    SOURCE, re.M | re.S,
+    "\n".join(line.split("#", 1)[0] for line in SOURCE.splitlines()), re.M | re.S,
 )
 MACROS = {}
 for name, body in SECTIONS:
@@ -56,6 +57,30 @@ def rendered(name, printer, **params):
 
 
 class PeltierTests(unittest.TestCase):
+    def test_trip_report_parses_after_config_comment_stripping(self):
+        output = rendered("NEVERMORE_PELTIER_THERMAL_TRIP",
+                          make_printer(active=True, hot=81), REASON="TEMPERATURE LIMIT")
+        for line in output.splitlines():
+            if line.strip().startswith("RESPOND "):
+                lexer = shlex.shlex(line.strip()[8:], posix=True)
+                lexer.whitespace_split = True
+                lexer.commenters = "#;"
+                args = dict(arg.split("=", 1) for arg in lexer)
+                self.assertIn("MSG", args)
+        report = output.index('RESPOND TYPE=error MSG="Peltier trip ')
+        for action in ("SET_PIN PIN=peltier VALUE=0", "NEVERMORE_FILTER SPEED=1",
+                       "VARIABLE=peltier_thermal_fault VALUE=1",
+                       "ID=NEVERMORE_PELTIER_COOLDOWN_COMPLETE DURATION=60",
+                       "VARIABLE=peltier_interlock_state"):
+            self.assertLess(output.index(action), report)
+
+    def test_respond_lines_have_no_config_comment_delimiters(self):
+        for path in (Path(__file__).resolve().parents[1] / "config").glob("*.cfg"):
+            for number, line in enumerate(path.read_text().splitlines(), 1):
+                if line.lstrip().startswith("RESPOND "):
+                    with self.subTest(file=path.name, line=number):
+                        self.assertNotIn("#", line)
+
     def test_good_immediate_and_delayed_start(self):
         self.assertIn("SET_PIN PIN=peltier VALUE=1",
                       rendered("NEVERMORE_PELTIER", make_printer(), VALUE=1))
@@ -133,7 +158,7 @@ class PeltierTests(unittest.TestCase):
         self.assertIn("VARIABLE=peltier_fault_fan_rpm VALUE=9600", output)
         self.assertIn("VARIABLE=peltier_fault_was_active VALUE=1", output)
         self.assertIn("VARIABLE=peltier_fault_seq VALUE=1", output)
-        self.assertIn("Peltier trip #1: TEMPERATURE LIMIT", output)
+        self.assertIn("Peltier trip 1: TEMPERATURE LIMIT", output)
         self.assertLess(output.index("SET_PIN PIN=peltier VALUE=0"),
                         output.index("VARIABLE=peltier_fault_hot"))
         self.assertLess(output.index("VARIABLE=peltier_fault_fan_rpm"),
@@ -148,7 +173,7 @@ class PeltierTests(unittest.TestCase):
         self.assertIn("SET_PIN PIN=peltier VALUE=0", duplicate)
         self.assertNotIn("VARIABLE=peltier_fault_reason", duplicate)
         self.assertNotIn("VARIABLE=peltier_fault_seq", duplicate)
-        self.assertNotIn("Peltier trip #", duplicate)
+        self.assertNotIn("Peltier trip ", duplicate)
 
     def test_reset_blocked_until_cooldown_complete(self):
         result = rendered("NEVERMORE_PELTIER_THERMAL_RESET",
