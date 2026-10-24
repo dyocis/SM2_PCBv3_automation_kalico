@@ -42,6 +42,7 @@ jobs:
           python3 scripts/test_sm2_connection.py
           CC=gcc python3 scripts/test_sm2_i2c.py
           python3 scripts/test_sm2_bme280.py
+          python3 scripts/test_sm2_sgp40.py
 
       - name: Build release archive
         env:

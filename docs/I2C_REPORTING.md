@@ -62,16 +62,31 @@ The fixture `tests/fixtures/kalico_bme280.py` is the unmodified
 and GPL notice are retained. Runtime compatibility with other base-driver
 revisions has not been established.
 
-- Route all opted-in SGP40/BME280 operations, including initialization and
-  buffered writes, through this adapter. Ordinary sensor instances must keep
-  their original transport.
-- Catch transport errors in the drivers, invalidate samples immediately, and
-  expose freshness/error state to automation and history. Zero is not a valid
-  replacement for missing temperature/humidity data.
-- Reject SGP40 CRC failures and prevent invalid samples from updating its VOC
-  algorithm or saved calibration.
-- Bound retries, reinitialize sensors deliberately, and respect the connection
-  monitor's restart latch. Reconnection must not re-arm cooling or UV.
+The uninstalled `sm2_sgp40.py` prototype registers `SM2_SGP40`, subclassing
+thetic/klipper-sgp40 revision `d07664022fd24a6b0f26305d88dfbbd84213d993`.
+Its unmodified `src/klipper_sgp40/__init__.py` is retained with upstream notices
+as `tests/fixtures/sgp40_upstream.py`. Runtime installation requires that
+package and its gas-index algorithm; no global bus monkey patch is used.
+
+The prototype validates every returned word's CRC before VOC processing,
+rejects a failed self-test, requires validity-aware temperature/humidity
+references, and retains the compensation associated with the measurement
+that produced each sample. Failed measurements do not train the VOC algorithm
+or emit fake zero callbacks. Retries are bounded, including repeated CRC
+failures interspersed with successful measurement-start writes. A reconnect
+requires restart. Queries report unavailable state and calibration saving is
+refused while readings are unavailable. Both synchronized peers must use the
+new driver. Tests use a recording algorithm to prove invalid samples are not
+processed; they do not validate VOC chemistry, accuracy or long-term learning.
+
+- Integrate the prototype drivers with installer preflight/version checks and
+  validity-aware automation/history. Ordinary sensor instances must retain
+  their original transport. Do not enable either prototype with numeric-only
+  consumers. Missing readings must not be interpreted as zero.
+- Validate both sensors together with the actual gas-index algorithm and
+  assess behavior after extended sample gaps, including calibration readiness.
+- Reconcile outputs and automation with driver failure/restart states.
+  Reconnection or restored measurements must not re-arm cooling or UV.
 - Validate the STM32 bus after NACK and timeout. Reporting a failure does not
   establish that a stuck bus has recovered.
 - Build the complete G0B1 firmware and validate attended hardware behavior
