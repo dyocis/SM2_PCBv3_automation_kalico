@@ -25,6 +25,7 @@ class SM2SGP40(sgp40.SGP40):
         self.latched = False
         self.initialized = False
         self.pending_compensation = None
+        self.algorithm_interrupted = False
         self.references = {}
         self.step_timer = self.reactor.register_timer(self._handle_step)
         prefix = "danger:non_critical_mcu_%s:" % self.mcu.get_name()
@@ -106,6 +107,9 @@ class SM2SGP40(sgp40.SGP40):
             self._lost()
             return self.reactor.NEVER
         try:
+            if (self.last_sample_time is not None and
+                    self.reactor.monotonic() - self.last_sample_time > 3 * self._gia.sampling_interval):
+                self.algorithm_interrupted = True
             if not self.initialized:
                 self._init_sgp40()
             temp, humidity = self._compensation(self.reactor.monotonic())
@@ -114,6 +118,15 @@ class SM2SGP40(sgp40.SGP40):
                 self._compensation(self.reactor.monotonic())
                 if self.latched:
                     raise SM2I2CError("SGP40 disconnected during measurement")
+                if self.algorithm_interrupted:
+                    states = self._gia.get_states()
+                    gap = self.reactor.monotonic() - self.last_sample_time
+                    if gap > 600:
+                        self._lost()
+                        raise SM2I2CError("VOC measurement gap exceeded 10 minutes; restart required")
+                    self._gia.reset()
+                    self._gia.set_states(*states)
+                    self.algorithm_interrupted = False
                 self._gia.calibrating = not self._is_hot(eventtime)
                 if (self._sync_peer is not None
                         and self._sync_peer.get_status(self.reactor.monotonic())["valid"]):
@@ -122,9 +135,12 @@ class SM2SGP40(sgp40.SGP40):
                 self.raw = self._gia.raw
                 self.temp, self.humidity = self.pending_compensation
                 self.last_sample_time = self.reactor.monotonic()
-                self.valid = True
+                # The real algorithm emits zero during initial blackout.
+                # It is not a valid clean-air measurement.
+                self.valid = self.voc > 0
                 self.failures = 0
-                self._callback(self.mcu.estimated_print_time(self.last_sample_time), self.voc)
+                if self.valid:
+                    self._callback(self.mcu.estimated_print_time(self.last_sample_time), self.voc)
                 self._wait_ms(20)
             cmd = (sgp40.MEASURE_RAW_CMD_PREFIX + sgp40._humidity_to_ticks(humidity)
                    + sgp40._temperature_to_ticks(temp))
@@ -137,11 +153,14 @@ class SM2SGP40(sgp40.SGP40):
             self._gia.calibrating = False
             self._measuring = False
             self.pending_compensation = None
+            if self.last_sample_time is not None:
+                self.algorithm_interrupted = True
             self.failures += 1
             self.health.failure(exc, exhausted=self.failures >= 5)
             return (self.reactor.monotonic() + min(2 ** self.failures, 30)
                     if self.failures < 5 and not self.latched else self.reactor.NEVER)
-        self.last_error = None if self.valid else "WAITING_FOR_SAMPLE"
+        self.last_error = (None if self.valid else "WARMING_UP"
+                           if self.last_sample_time is not None else "WAITING_FOR_SAMPLE")
         if self.valid:
             self.health.recovered()
         return self.reactor.monotonic() + self._gia.sampling_interval

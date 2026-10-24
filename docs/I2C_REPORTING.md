@@ -101,6 +101,15 @@ refused while readings are unavailable. Both synchronized peers must use the
 new driver. Tests use a recording algorithm to prove invalid samples are not
 processed; they do not validate VOC chemistry, accuracy or long-term learning.
 
+`test_sm2_real_gia.py` additionally exercises the actual pinned `gia.py`
+algorithm with the BME280 and SGP40 prototypes. Algorithm blackout values are
+reported as unavailable/WARMING_UP, never as clean-air zero callbacks. Invalid
+CRC and compensation readings do not advance learning. Short interruptions
+reset the algorithm and restore its saved states per the upstream interface;
+interruptions exceeding ten minutes require restart instead of automatically
+reusing old learning. The upstream file is retained as `sgp40_gia.py` in the
+test fixtures. These are software integration tests, not accuracy validation.
+
 - Integrate the prototype drivers with installer preflight/version checks and
   validity-aware automation/history. Ordinary sensor instances must retain
   their original transport. Do not enable either prototype with numeric-only

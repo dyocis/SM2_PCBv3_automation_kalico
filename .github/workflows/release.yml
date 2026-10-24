@@ -44,6 +44,7 @@ jobs:
           python3 scripts/test_sm2_bme280.py
           python3 scripts/test_sm2_sgp40.py
           python3 scripts/test_sm2_sensor_health.py
+          python3 scripts/test_sm2_real_gia.py
 
       - name: Build release archive
         env:
