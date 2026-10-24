@@ -1,5 +1,7 @@
 # Manual installation
 
+> Experimental Kalico fork: no stable release exists. Read [the Kalico plan](KALICO.md) before using these inherited instructions.
+
 Use this guide when the automatic installer cannot identify a custom layout or when you want to review every system change yourself.
 
 The personal-project, hardware-support, responsibility, and warranty notices in the README apply here. This configuration targets only:
@@ -62,7 +64,7 @@ Use the extension projects' current instructions if their scripts or requirement
 ## 3. Clone this project
 
 ```bash
-git clone https://github.com/dyocis/SM2_PCBv3_automation.git "$SM2_INSTALL_DIR"
+git clone https://github.com/dyocis/SM2_PCBv3_automation_kalico.git "$SM2_INSTALL_DIR"
 ```
 
 ## 4. Create the local configuration directory
@@ -146,7 +148,7 @@ Add this to the active `moonraker.conf`, replacing the path with the absolute ch
 type: git_repo
 channel: stable
 path: /home/USER/SM2_PCBv3_automation
-origin: https://github.com/dyocis/SM2_PCBv3_automation.git
+origin: https://github.com/dyocis/SM2_PCBv3_automation_kalico.git
 primary_branch: main
 managed_services: klipper
 info_tags:
