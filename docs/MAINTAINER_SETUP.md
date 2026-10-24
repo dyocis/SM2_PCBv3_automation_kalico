@@ -1,6 +1,8 @@
 # Maintainer setup and release workflow
 
-This guide is for the owner of `dyocis/SM2_PCBv3_automation`. It assumes little or no prior GitHub release experience.
+> Experimental Kalico fork: no stable release exists. Read [the Kalico plan](KALICO.md) before using these inherited instructions.
+
+This guide is for the owner of `dyocis/SM2_PCBv3_automation_kalico`. It assumes little or no prior GitHub release experience.
 
 This remains a personal, best-effort project. A clean workflow makes updates safer and easier to publish; it does not create an obligation to release on a schedule.
 
@@ -18,7 +20,7 @@ Create normal feature and fix branches from `development`, and merge them back i
 
 The repository has already been created at:
 
-<https://github.com/dyocis/SM2_PCBv3_automation>
+<https://github.com/dyocis/SM2_PCBv3_automation_kalico>
 
 For GitHub's initialization choices, use:
 
@@ -37,7 +39,7 @@ Extract the prepared repository package. In a terminal, change to the directory 
 
 ```bash
 git init -b main
-git remote add origin https://github.com/dyocis/SM2_PCBv3_automation.git
+git remote add origin https://github.com/dyocis/SM2_PCBv3_automation_kalico.git
 git add .
 git status
 git commit -m "Initial public release"
@@ -92,7 +94,7 @@ In **Settings → General → Features**, enable Issues if you want public repor
 
 `v0.2.0` is the optional-hardware release. If that tag already exists, do not recreate, move, or reuse it. Otherwise, publish it only after the complete `development` candidate passes validation and attended hardware testing:
 
-1. Open the [`main ← development` comparison](https://github.com/dyocis/SM2_PCBv3_automation/compare/main...development).
+1. Open the [`main ← development` comparison](https://github.com/dyocis/SM2_PCBv3_automation_kalico/compare/main...development).
 2. Create a pull request with `main` as the base and `development` as the compare branch.
 3. Review the complete diff and confirm the release-facing README and changelog are included.
 4. Wait for the `Validate` workflow to pass.

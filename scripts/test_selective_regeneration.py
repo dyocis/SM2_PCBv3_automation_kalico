@@ -28,7 +28,7 @@ class SelectiveRegenerationTests(unittest.TestCase):
     def run_writers(self, extra=""):
         values = dict(PROJECT_NAME="SM2_PCBv3_automation", CONFIG_ROOT=str(self.config),
                       INSTALL_DIR=str(ROOT), MOONRAKER_CONFIG=str(self.moonraker),
-                      PROJECT_BRANCH="main", REPO_URL="https://github.com/dyocis/SM2_PCBv3_automation.git",
+                      PROJECT_BRANCH="main", REPO_URL="https://github.com/dyocis/SM2_PCBv3_automation_kalico.git",
                       MCU_SERIAL="/dev/serial/by-id/test", CANBUS_UUID="", ASSUME_YES="1",
                       WITH_UV="0", WITH_PELTIER="0", WITH_VENT_SERVO="0")
         script = "set -Eeuo pipefail\n" + "\n".join(k + "=" + shlex.quote(v) for k, v in values.items())

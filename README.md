@@ -117,10 +117,10 @@ This separates firmware, wiring, connector, sensor, and hardware faults from aut
 
 SSH to the printer host as the normal Klipper user. Do **not** switch to root.
 
-Review the [`main` installer source](https://github.com/dyocis/SM2_PCBv3_automation/blob/main/scripts/install.sh), then run:
+Review the [`main` installer source](https://github.com/dyocis/SM2_PCBv3_automation_kalico/blob/main/scripts/install.sh), then run:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/dyocis/SM2_PCBv3_automation/main/scripts/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/dyocis/SM2_PCBv3_automation_kalico/main/scripts/install.sh)"
 ```
 
 After the official configuration passes those tests and its include is disabled, the installer will:

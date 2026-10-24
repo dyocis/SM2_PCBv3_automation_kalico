@@ -1,3 +1,14 @@
+# Kalico changelog
+
+## Unreleased Kalico foundation
+
+- Separate repository and update origin; inherited Klipper v0.4.0 source history.
+- No stable Kalico release or fault-tolerance claim yet. See [the release plan](docs/KALICO.md).
+
+## Historical Klipper changelog
+
+The entries below describe releases of the original Klipper project, not Kalico releases.
+
 # Changelog
 
 All notable public changes will be recorded here. This personal project is maintained on a best-effort basis and has no promised release schedule.
