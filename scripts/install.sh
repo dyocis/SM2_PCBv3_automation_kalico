@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 PROJECT_NAME="SM2_PCBv3_automation"
-REPO_URL="https://github.com/dyocis/SM2_PCBv3_automation.git"
+REPO_URL="https://github.com/dyocis/SM2_PCBv3_automation_kalico.git"
 PROJECT_BRANCH="main"
 DEFAULT_DASHBOARD_PORT=7131
 DEFAULT_MOONRAKER_PORT=7125

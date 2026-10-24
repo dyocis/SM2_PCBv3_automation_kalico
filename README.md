@@ -1,4 +1,22 @@
-# SM2 PCB v3 automation
+# SM2 PCB v3 automation for Kalico
+
+**Experimental development fork. There is no stable Kalico release yet.**
+
+This repository starts from the Klipper project's v0.4.0 commit
+`d1ff6fb5844ae6a4b0dfe46835ec0e3661237c07`. The original
+[SM2_PCBv3_automation](https://github.com/dyocis/SM2_PCBv3_automation)
+continues to provide Klipper releases. This repository will publish its own
+Kalico releases after compatibility and recovery testing.
+
+Normal operation on Kalico does not establish fault tolerance. SM disconnect
+handling, stale sensor detection, I2C error recovery, and safe reconnect remain
+development work. Do not switch a working installation's update source yet.
+The inherited installer and instructions below are reference material until the
+Kalico migration is tested; the installer now targets this repository, which has
+no stable release. Existing installation paths remain unchanged for migration.
+
+See [Kalico development and release plan](docs/KALICO.md) for scope and release
+criteria. The v0.4.0 notes below describe the inherited Klipper baseline.
 
 **v0.4.0 fixes a Klipper idle-timeout defect and includes all changes merged since v0.3.0.** Previous versions repeatedly sent unchanged fan/UV commands, which could prevent idle shutdown indefinitely. Update through Moonraker while idle and restart Klipper; restart the history recorder and hard-refresh the dashboard for history improvements. Local settings and idle timeout values are preserved. See [release and upgrade notes](CHANGELOG.md#040---2026-10-22).
 
