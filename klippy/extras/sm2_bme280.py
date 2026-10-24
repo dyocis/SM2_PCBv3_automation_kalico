@@ -5,6 +5,7 @@ import math
 
 from . import bme280
 from .sm2_i2c import SM2I2CReport, SM2I2CError
+from .sm2_sensor_health import SensorHealth
 
 
 class SM2BME280(bme280.BME280):
@@ -18,6 +19,7 @@ class SM2BME280(bme280.BME280):
             raise config.error("SM2_BME280 is for ambient temperature_sensor sections only")
         super().__init__(config)
         self.i2c = SM2I2CReport(self.i2c)
+        self.health = SensorHealth(self.printer, self.name)
         self.valid = False
         self.last_sample_time = None
         self.last_error = "STARTING"
@@ -97,6 +99,7 @@ class SM2BME280(bme280.BME280):
             self.valid = False
             self.last_error = str(exc)
             self.failures += 1
+            self.health.failure(exc, exhausted=self.failures >= 5)
             # Retry at most five consecutive failures. Do not silently keep
             # polling a broken bus forever or resume after MCU reconnect.
             return (self.reactor.monotonic() + min(2 ** self.failures, 30)
@@ -116,6 +119,7 @@ class SM2BME280(bme280.BME280):
         self.last_error = None
         self.failures = 0
         self._callback(self.mcu.estimated_print_time(self.last_sample_time), self.temp)
+        self.health.recovered()
         return self.last_sample_time + bme280.REPORT_TIME
 
     def get_status(self, eventtime):
@@ -134,7 +138,8 @@ class SM2BME280(bme280.BME280):
                     last_sample_time=self.last_sample_time,
                     error=(self.last_error or "STALE") if not valid else None,
                     consecutive_errors=self.failures,
-                    restart_required=self.latched or self.failures >= 5)
+                    restart_required=self.latched or self.failures >= 5,
+                    health=self.health.get_status())
 
 
 def load_config(config):

@@ -48,7 +48,8 @@ class SGPTests(unittest.TestCase):
         self.callbacks, self.samples, self.saved = [], [], []
         self.reference = dict(valid=True, temperature=25., humidity=40.)
         self.objects["bme280 BME_IN"] = SimpleNamespace(get_status=lambda t: self.reference.copy())
-        self.objects["gcode"] = SimpleNamespace(register_mux_command=lambda *a, **kw: None)
+        self.objects["gcode"] = SimpleNamespace(register_mux_command=lambda *a, **kw: None,
+                                               respond_info=lambda message: None)
         self.objects["heaters"] = SimpleNamespace(lookup_heater=lambda n: SimpleNamespace(get_temp=lambda t: (20, 0)))
         self.objects["configfile"] = SimpleNamespace(set=lambda *a: self.saved.append(a))
         self.printer = SimpleNamespace(
@@ -115,6 +116,7 @@ class SGPTests(unittest.TestCase):
         self.assertEqual(self.samples, [])
         self.assertFalse(self.status()["valid"])
         self.assertIn("CRC", self.status()["error"])
+        self.assertEqual(self.status()["health"]["errors_by_kind"], {"crc": 1})
 
     def test_repeated_bad_crc_exhausts_retries_despite_successful_triggers(self):
         self.start()

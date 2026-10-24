@@ -45,6 +45,28 @@ an existing output. It does not install, build or flash firmware.
 
 ## Remaining integration work
 
+### Fault notifications and statistics
+
+Each prototype sensor emits a direct console message on fault entry, a message
+when its retry budget is exhausted, and recovery only after a complete valid
+sample. Repeated attempts within one unresolved incident do not repeat console
+alerts. Rapid new incidents are limited to one announced incident per sensor
+per minute; all incident/recovery transitions still enter `klippy.log`.
+
+The driver's `health` status contains `incident_count`, `failed_attempt_count`,
+`errors_by_kind`, `incidents_by_kind`, `fault_active`, `retries_exhausted`,
+`last_error`, `last_fault_utc`, `last_recovery_utc`, and `observed_seconds`.
+Categories distinguish confirmed firmware `i2c_bus` statuses from `transport`
+query failures, `crc`, compensation `reference`, `protocol`, and other `sensor`
+errors. Multiple retries are not independent incidents. A single incident can
+involve multiple categories; category incident counts must not be summed as
+independent physical failures. Two sensors can also share one physical fault.
+
+Counters reset when the host process restarts; they are not lifetime counters.
+Existing log retention/rotation controls how long event history survives.
+Notifications are local console/log messages, not phone or email alerts.
+No notification behavior is installed on the running printer yet.
+
 An uninstalled `sm2_bme280.py` prototype registers the separate `SM2_BME280`
 factory for ambient `temperature_sensor` sections only. It subclasses the
 pinned Kalico BME280 implementation for calibration and compensation, routes

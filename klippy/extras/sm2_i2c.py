@@ -11,6 +11,9 @@ STATUS_NAMES = {1: "NACK", 2: "TIMEOUT", 3: "START_NACK",
 
 class SM2I2CError(Exception):
     """No valid measurement is available from this transaction."""
+    def __init__(self, message, kind="sensor"):
+        super().__init__(message)
+        self.kind = kind
 
 
 class SM2I2CReport:
@@ -65,7 +68,7 @@ class SM2I2CReport:
                                       minclock=minclock, reqclock=reqclock,
                                       retry=False)
         except self.command_error as exc:
-            raise SM2I2CError("SM2 I2C query failed: %s" % exc) from exc
+            raise SM2I2CError("SM2 I2C query failed: %s" % exc, "transport") from exc
         if (self.mcu.non_critical_disconnected
                 or getattr(self.mcu, "_reconnecting", False)):
             raise SM2I2CError("SM2 disconnected during I2C transaction")
@@ -73,7 +76,8 @@ class SM2I2CReport:
             raise SM2I2CError("Invalid SM2 I2C response OID")
         status = reply.get("status")
         if status != 0:
-            raise SM2I2CError("SM2 I2C %s" % STATUS_NAMES.get(status, "UNKNOWN_ERROR"))
+            raise SM2I2CError("SM2 I2C %s" % STATUS_NAMES.get(status, "UNKNOWN_ERROR"),
+                              "i2c_bus" if status in (1, 2, 3, 4) else "protocol")
         response = reply.get("response")
         if not isinstance(response, (bytes, bytearray)) or len(response) != read_len:
             raise SM2I2CError("Incomplete SM2 I2C response")

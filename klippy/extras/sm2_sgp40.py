@@ -5,6 +5,7 @@ import math
 
 from . import sgp40
 from .sm2_i2c import SM2I2CReport, SM2I2CError
+from .sm2_sensor_health import SensorHealth
 
 
 class SM2SGP40(sgp40.SGP40):
@@ -16,6 +17,7 @@ class SM2SGP40(sgp40.SGP40):
         if not self.temp_sensor or not self.humidity_sensor:
             raise config.error("SM2_SGP40 requires temperature and humidity reference sensors")
         self.i2c = SM2I2CReport(self.i2c)
+        self.health = SensorHealth(self.printer, self.name)
         self.valid = False
         self.last_sample_time = None
         self.last_error = "STARTING"
@@ -77,7 +79,7 @@ class SM2SGP40(sgp40.SGP40):
         for pos in range(0, len(response), 3):
             word = response[pos:pos + 2]
             if not sgp40._check_crc8(word, response[pos + 2]):
-                raise SM2I2CError("SGP40 CRC mismatch")
+                raise SM2I2CError("SGP40 CRC mismatch", "crc")
             words.append(int.from_bytes(word, "big"))
         return words
 
@@ -88,7 +90,7 @@ class SM2SGP40(sgp40.SGP40):
             value = status.get(field)
             if (status.get("valid") is not True or not isinstance(value, (int, float))
                     or not math.isfinite(value)):
-                raise SM2I2CError("SGP40 reference %s unavailable" % field)
+                raise SM2I2CError("SGP40 reference %s unavailable" % field, "reference")
             values[field] = value
         if set(values) != {"temperature", "humidity"}:
             raise SM2I2CError("SGP40 compensation references unavailable")
@@ -136,9 +138,12 @@ class SM2SGP40(sgp40.SGP40):
             self._measuring = False
             self.pending_compensation = None
             self.failures += 1
+            self.health.failure(exc, exhausted=self.failures >= 5)
             return (self.reactor.monotonic() + min(2 ** self.failures, 30)
                     if self.failures < 5 and not self.latched else self.reactor.NEVER)
         self.last_error = None if self.valid else "WAITING_FOR_SAMPLE"
+        if self.valid:
+            self.health.recovered()
         return self.reactor.monotonic() + self._gia.sampling_interval
 
     def get_status(self, eventtime):
@@ -162,7 +167,8 @@ class SM2SGP40(sgp40.SGP40):
                     last_sample_time=self.last_sample_time,
                     error=error if not valid else None,
                     consecutive_errors=self.failures,
-                    restart_required=self.latched or self.failures >= 5)
+                    restart_required=self.latched or self.failures >= 5,
+                    health=self.health.get_status())
 
     def query_gcode(self, gcmd):
         status = self.get_status(self.reactor.monotonic())

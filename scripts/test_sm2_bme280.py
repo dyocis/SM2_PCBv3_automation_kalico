@@ -27,6 +27,7 @@ def load(name, path):
 
 base = load("bme280", ROOT / "tests/fixtures/kalico_bme280.py")
 transport = load("sm2_i2c", ROOT / "klippy/extras/sm2_i2c.py")
+health = load("sm2_sensor_health", ROOT / "klippy/extras/sm2_sensor_health.py")
 driver = load("sm2_bme280", ROOT / "klippy/extras/sm2_bme280.py")
 
 
@@ -54,6 +55,7 @@ class SensorTests(unittest.TestCase):
         self.sent = []
         self.config_callbacks = []
         self.printer = SimpleNamespace(
+            lookup_object=lambda name: SimpleNamespace(respond_info=lambda message: None),
             get_reactor=lambda: self.reactor, command_error=TimeoutError,
             add_object=lambda *a: None, get_start_args=lambda: {},
             register_event_handler=lambda k, v: self.events.setdefault(k, []).append(v),
@@ -108,6 +110,7 @@ class SensorTests(unittest.TestCase):
         for field in ("temperature", "humidity", "pressure"):
             self.assertIsNone(self.status()[field])
         self.assertEqual(len(self.samples), 1)
+        self.assertEqual(self.status()["health"]["errors_by_kind"], {"i2c_bus": 1})
         self.assertEqual(self.shutdowns, [])
 
     def test_bounded_retry_and_successful_transient_recovery(self):
