@@ -37,6 +37,7 @@ def make_printer(installed=True, enabled=True, hot=45, cold=30, active=False,
                     fan_spinup_seconds=5, peltier_cooldown_seconds=60,
                     minimum_safe_rpm=2000, pcb_max_temp=70, mcu_max_temp=75)
     result = {
+        "sm2_connection": {"available": True},
         "gcode_macro SM_LED_STATE": sm, "gcode_macro SM2_SETTINGS": settings,
         "output_pin peltier": {}, "servo SM_Vent": {},
         "fan_generic Filter": dict(speed=1.0, rpm=9600),

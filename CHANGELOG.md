@@ -2,6 +2,10 @@
 
 ## Unreleased Kalico foundation
 
+- Experimental connection monitor and macro gates latch SM communication loss
+  and inhibit later work until a deliberate idle restart. Software-tested only;
+  I2C, driver lifecycle, queued-command races, physical output safety and
+  dashboard validity still require work. Not ready for deployment.
 - Separate repository and update origin; inherited Klipper v0.4.0 source history.
 - No stable Kalico release or fault-tolerance claim yet. See [the release plan](docs/KALICO.md).
 

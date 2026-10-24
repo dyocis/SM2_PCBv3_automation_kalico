@@ -77,6 +77,7 @@ def printer_state(
         peltier_cooldown_seconds=60,
     )
     data = {
+        "sm2_connection": {"available": True},
         "gcode_macro SM_LED_STATE": sm,
         "gcode_macro SM2_SETTINGS": settings,
         "fan_generic Filter": dict(speed=1.0, rpm=rpm),

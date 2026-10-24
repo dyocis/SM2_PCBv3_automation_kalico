@@ -39,6 +39,39 @@ release. A newer Kalico `main` commit is not automatically a supported target.
 
 ## Stable release criteria
 
+### Connection gate development candidate
+
+The first candidate adds `[sm2_connection]` and an installer-owned host-module
+symlink. It requires `[mcu SM] is_non_critical: True`. Existing hardware files
+are preserved, so their setting must be checked explicitly during migration.
+The monitor reads live MCU flags and listens for Kalico disconnect/reconnect
+events. The current target's exported MCU status may lag the actual disconnect.
+
+Control macros, startup work, calibration work, and delayed callbacks check this
+gate before evaluating sensor readings or scheduling hardware commands. A loss
+of connection latches the gate; reconnection does not re-arm it. Inspect the
+hardware and restart Kalico while idle to create a fresh monitor. There is no
+runtime override/reset command. The `sm2_connection` status object reports
+availability, connection state, restart requirement, and reason.
+
+This is an uninstalled software-test candidate, not a complete fault-tolerance
+implementation. It does not cancel commands already rendered/queued, ensure
+physical outputs shut off, stop third-party sensor/LED callbacks, establish
+sensor freshness, or change firmware shutdown behavior. Existing status caches
+and dashboard history still need validity handling. Initial MCU absence may
+still prevent sensor-driver startup before the gate can act. Direct `SET_PIN`,
+`SET_FAN_SPEED`, `SET_SERVO`, and sensor commands bypass the macro gate.
+Even an emergency macro is skipped when the gate is inhibited: that cannot be
+treated as a physical emergency stop. Resolve these limitations and validate
+the output shutdown/cooldown behavior before deployment or fault injection.
+
+Tests cover lifecycle latching and render every shipped control template with
+no sensor/output objects and an absent or unavailable monitor. Existing thermal
+and automation tests continue to exercise the connected paths. These are
+software checks only.
+
+### Release validation
+
 Run existing configuration, installer, dashboard, idle-timeout and thermal
 tests, plus failure/recovery regression tests. Document attended hardware
 validation for initial absence, disconnect, reconnect, I2C errors and stale

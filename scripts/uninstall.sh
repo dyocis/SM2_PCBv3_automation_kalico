@@ -6,6 +6,7 @@ PROJECT_NAME="SM2_PCBv3_automation"
 CONFIG_ROOT=""
 MOONRAKER_CONFIG=""
 INSTALL_DIR="${HOME}/${PROJECT_NAME}"
+KLIPPER_PATH="${HOME}/klipper"
 PURGE_REPO=0
 ASSUME_YES=0
 
@@ -18,6 +19,7 @@ usage() {
     printf '%s\n' "  --config-root PATH       Klipper configuration directory"
     printf '%s\n' "  --moonraker-config PATH  moonraker.conf path"
     printf '%s\n' "  --install-dir PATH       Git checkout (default: ~/SM2_PCBv3_automation)"
+    printf '%s\n' "  --klipper-path PATH      Kalico checkout (default: ~/klipper)"
     printf '%s\n' "  --purge-repo             Also delete the project Git checkout"
     printf '%s\n' "  --yes                    Skip confirmation"
     printf '%s\n' "  -h, --help               Show this help"
@@ -28,6 +30,7 @@ while (($#)); do
         --config-root) CONFIG_ROOT="${2:?missing value}"; shift 2 ;;
         --moonraker-config) MOONRAKER_CONFIG="${2:?missing value}"; shift 2 ;;
         --install-dir) INSTALL_DIR="${2:?missing value}"; shift 2 ;;
+        --klipper-path) KLIPPER_PATH="${2:?missing value}"; shift 2 ;;
         --purge-repo) PURGE_REPO=1; shift ;;
         --yes) ASSUME_YES=1; shift ;;
         -h|--help) usage; exit 0 ;;
@@ -80,6 +83,12 @@ if [[ -n "${MOONRAKER_CONFIG}" ]]; then
 fi
 
 rm -f "${CONFIG_ROOT}/SM2_PCBv3.cfg"
+# Remove only the connection-module symlink owned by this checkout.
+connection_link="${KLIPPER_PATH}/klippy/extras/sm2_connection.py"
+if [[ -L "${connection_link}" ]] \
+    && [[ "$(readlink -f "${connection_link}")" == "$(readlink -f "${INSTALL_DIR}/klippy/extras/sm2_connection.py")" ]]; then
+    rm "${connection_link}"
+fi
 target_dir="${CONFIG_ROOT}/${PROJECT_NAME}"
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 if [[ -f "${target_dir}/SM2_Local_Hardware.cfg" ]]; then
