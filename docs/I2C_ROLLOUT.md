@@ -76,8 +76,10 @@ The runtime JSON must contain the `configfile.config` object from a fresh
 Moonraker query, not the surrounding response. The tool resolves ordinary
 nested includes and sorted globs, records the source of each target section,
 and compares all four sensors' transport/reference/factory settings to that
-runtime object. It rejects missing, repeated, recursive or parameterized
+runtime object. It rejects missing, recursive or parameterized
 includes, inline includes, duplicate target sections and partial migrations.
+Repeated includes containing target sensors are rejected; unrelated repeated
+includes are retained in the config and backed up once.
 These intentional restrictions require manual review of unfamiliar layouts;
 this is not a replacement for Kalico's full configuration parser.
 

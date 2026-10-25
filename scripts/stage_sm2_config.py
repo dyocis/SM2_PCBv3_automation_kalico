@@ -22,14 +22,17 @@ def digest(data):
 
 
 def inspect_tree(main, staging=None):
-    files, targets, visited = {}, {}, set()
+    files, targets, visited, contains_targets = {}, {}, set(), {}
 
     def visit(path, stack):
         path = path.resolve(strict=True)
         if path in stack:
             raise ValueError("Recursive include: " + str(path))
         if path in visited:
-            raise ValueError("Repeated include requires review: " + str(path))
+            if contains_targets.get(path, True):
+                raise ValueError("Repeated include with target sensors requires review: " + str(path))
+            return
+        previous_targets = set(targets)
         visited.add(path)
         data = path.read_bytes()
         lines = data.decode("utf-8").splitlines(keepends=True)
@@ -81,6 +84,7 @@ def inspect_tree(main, staging=None):
                 finish(index)
                 current, start = match[1], index
         finish(len(lines))
+        contains_targets[path] = set(targets) != previous_targets
 
     visit(main, [])
     if set(targets) != set(TARGETS):

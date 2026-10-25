@@ -64,6 +64,16 @@ class StageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Repeated"):
             inspect_tree(self.main)
 
+    def test_repeated_unrelated_include_is_backed_up_once(self):
+        unrelated = self.config / "unrelated.cfg"
+        unrelated.write_text("[gcode_macro EXAMPLE]\ngcode: M400\n")
+        with self.main.open("a") as file:
+            file.write("[include unrelated.cfg]\n[include unrelated.cfg]\n")
+        files, targets = inspect_tree(self.main)
+        self.assertIn(unrelated.resolve(), files)
+        self.assertEqual(len(files), 6)
+        self.assertEqual(set(targets), set(TARGETS))
+
     def test_missing_glob_or_target_is_rejected(self):
         self.main.write_text("[include missing/*.cfg]\n")
         with self.assertRaisesRegex(ValueError, "matched no files"):
