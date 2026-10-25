@@ -21,6 +21,9 @@ class SM2Connection:
         self.latched = False
         self.reason = "STARTING"
         self.disconnect_count = 0
+        self.sensors_armed = False
+        self.sensor_latched = False
+        self.sensor_mode_seen = False
         self.printer.register_event_handler("klippy:connect", self._connect)
         self.printer.register_event_handler("klippy:ready", self._ready)
         self.printer.register_event_handler("klippy:shutdown", self._shutdown)
@@ -65,6 +68,21 @@ class SM2Connection:
         self.reason = "RESTART_REQUIRED"
 
     def get_status(self, eventtime=None):
+        if eventtime is None:
+            eventtime = self.printer.get_reactor().monotonic()
+        readings = []
+        for name in ("bme280 BME_IN", "bme280 BME_OUT", "sgp40 SGP_IN", "sgp40 SGP_OUT"):
+            sensor = self.printer.lookup_object(name, None)
+            readings.append(sensor.get_status(eventtime) if sensor is not None else {})
+        self.sensor_mode_seen |= any("valid" in reading for reading in readings)
+        managed = self.sensor_mode_seen
+        fresh = all(reading.get("valid") is True for reading in readings)
+        if managed:
+            if fresh:
+                self.sensors_armed = True
+            elif self.sensors_armed:
+                self.sensor_latched = True
+        sensors_ready = (not managed or fresh) and not self.sensor_latched
         disconnected = self.mcu is None or self.mcu.non_critical_disconnected
         reconnecting = bool(getattr(self.mcu, "_reconnecting", False))
         # Use the live MCU flags: the exported MCU status can lag a disconnect.
@@ -82,7 +100,9 @@ class SM2Connection:
             reason = "RESTART_REQUIRED"
         return dict(available=available, connected=connected,
                     restart_required=self.latched, reason=reason,
-                    disconnect_count=self.disconnect_count)
+                    disconnect_count=self.disconnect_count,
+                    sensors_ready=sensors_ready, sensors_managed=managed,
+                    sensor_restart_required=self.sensor_latched)
 
 
 def load_config(config):

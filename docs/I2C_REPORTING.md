@@ -134,3 +134,29 @@ test fixtures. These are software integration tests, not accuracy validation.
 
 The command harness checks protocol logic with simulated buses, not STM32
 electrical behavior, firmware timing, physical output safety, or sensor accuracy.
+
+## Automation guard candidate
+
+The connection monitor now separately reports `sensors_ready`,
+`sensors_managed`, and `sensor_restart_required`. Once any validity-aware
+driver is observed, all four configured BME/SGP objects must provide valid
+readings. Initial warm-up inhibits starts without latching a permanent fault.
+After all four have been valid, a later invalid reading latches the start
+inhibit until host restart. Sensor recovery alone never clears that latch.
+Legacy drivers without validity keep the prior behavior; that compatibility
+path is not evidence of sensor freshness.
+
+Positive Peltier/UV requests and delayed Peltier enable recheck sensor
+readiness. Sensor-dependent automation, status/cache updates and calibration
+are guarded before reading numeric values. The safety monitor and rejected
+start paths invoke `NEVERMORE_SENSOR_INHIBIT`, which cancels pending Peltier
+enable and routes active optional outputs through their existing OFF macros.
+Those OFF paths retain fan cooldown. Calibration timers abort instead of
+saving baselines or leaving a preparation phase stuck. Thermal trips still
+run without ambient readings, using -1 for unavailable chamber evidence.
+
+This does not make MCU disconnection physically safe: connection loss still
+prevents hardware commands. It also cannot retract already-rendered/queued
+commands. Attended validation of timing, actual output state and airflow is
+required before deployment. Installer version checks and a complete firmware
+build are still outstanding.

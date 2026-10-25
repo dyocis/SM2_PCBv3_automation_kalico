@@ -44,6 +44,7 @@ jobs:
           python3 scripts/test_uv_thermal.py
           python3 scripts/test_idle_timeout.py
           python3 scripts/test_sm2_connection.py
+          python3 scripts/test_sm2_sensor_guards.py
 
       - name: Validate repository content
         run: python3 scripts/validate_repo.py
