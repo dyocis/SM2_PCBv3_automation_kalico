@@ -31,6 +31,7 @@ class DeploymentTests(unittest.TestCase):
         for entry in plan["changes"]:
             self.assertEqual(digest((self.output / entry["forward"]).read_bytes()), entry["after_sha256"])
             if entry["originally_present"]:
+                self.assertIsInstance(entry["original_mode"], int)
                 self.assertEqual(digest((self.output / entry["rollback"]).read_bytes()), entry["before_sha256"])
             else:
                 self.assertIsNone(entry["rollback"])

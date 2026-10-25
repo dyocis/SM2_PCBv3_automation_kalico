@@ -109,9 +109,10 @@ Missing/duplicate active macro files and overlapping edits require review.
 The plan contains forward and rollback payloads with checksums, destination and
 resolved paths, original link/permission metadata where captured, and a unified
 diff. Review every macro diff: whole-file macro candidates may replace local
-customizations and are not automatically approved merges. Configuration copies
-alone do not preserve the permissions/link topology of every original include;
-that evidence must be completed before implementing an automatic restore.
+customizations and are not automatically approved merges. Config destinations
+use resolved paths and record original permissions. Any future executor must
+write those resolved files while preserving the include symlinks, and reject
+unexpected path or permission changes since preparation.
 
 This command never applies files, changes services, or flashes firmware. Its
 `installation_allowed` field remains false. A stopped-host apply/rollback

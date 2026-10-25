@@ -128,7 +128,8 @@ def stage(main, runtime_config, output):
     for index, (path, data) in enumerate(sorted(files.items())):
         backup = "%03d-original.cfg" % index
         (output / backup).write_bytes(data)
-        entry = dict(source=str(path), backup=backup, sha256=digest(data))
+        entry = dict(source=str(path), backup=backup, sha256=digest(data),
+                     mode=path.stat().st_mode & 0o777)
         if path in candidates:
             candidate = "%03d-candidate.cfg" % index
             changed = candidates[path]
@@ -145,6 +146,8 @@ def stage(main, runtime_config, output):
     current_files, current_candidates = plan(main, runtime_config, output)
     if current_files != files or current_candidates != candidates:
         raise ValueError("Configuration changed during backup; stage is incomplete")
+    if any(Path(entry["source"]).stat().st_mode & 0o777 != entry["mode"] for entry in entries):
+        raise ValueError("Configuration permissions changed during backup")
     # Written last: a partial directory without this manifest is not a completed stage.
     (output / "changes.diff").write_text("".join(diffs), encoding="utf-8")
     manifest = dict(schema=1, installation_allowed=False, scope="configuration-only",

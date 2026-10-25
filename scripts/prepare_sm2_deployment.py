@@ -21,6 +21,8 @@ def prepare(recovery, candidate, output):
         raise ValueError("Rebuild recovery/config stage with sensor factory registration")
     entries = {}
     for entry in config_manifest["files"]:
+        if "mode" not in entry:
+            raise ValueError("Rebuild config recovery with original file permissions")
         entries[entry["source"]] = dict(entry, backup="config/" + entry["backup"])
     for entry in manifest["artifacts"]:
         if entry["source"] in entries and entries[entry["source"]]["sha256"] != entry["sha256"]:
