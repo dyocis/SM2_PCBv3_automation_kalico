@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from stage_sm2_config import TARGETS, digest, inspect_tree, plan, stage
+from stage_sm2_config import TARGETS, REGISTRATION, digest, inspect_tree, plan, stage
 
 
 class StageTests(unittest.TestCase):
@@ -25,20 +25,26 @@ class StageTests(unittest.TestCase):
             (self.sensors / (str(index) + ".cfg")).write_bytes(text.replace("\n", "\r\n").encode())
             self.runtime[name] = dict(sensor_type=kind, i2c_mcu="SM")
 
-    def test_verified_backups_only_four_edits_no_live_changes(self):
+    def test_verified_backups_factory_edits_and_registration_no_live_changes(self):
         before = {path: path.read_bytes() for path in self.config.rglob("*.cfg")}
         output = self.root / "stage"
         manifest = stage(self.main, self.runtime, output)
         self.assertFalse(manifest["installation_allowed"])
         self.assertEqual(len(manifest["files"]), 5)
-        self.assertEqual(sum("candidate" in e for e in manifest["files"]), 4)
+        self.assertEqual(sum("candidate" in e for e in manifest["files"]), 5)
         for entry in manifest["files"]:
             original = (output / entry["backup"]).read_bytes()
             self.assertEqual(digest(original), entry["sha256"])
             self.assertEqual(original, before[Path(entry["source"])] )
             if "candidate" in entry:
                 candidate = (output / entry["candidate"]).read_bytes()
-                self.assertEqual(candidate.replace(b"sensor_type: SM2_", b"sensor_type: "), original)
+                if Path(entry["source"]) == self.main.resolve():
+                    newline = "\r\n" if b"\r\n" in original else "\n"
+                    self.assertEqual(candidate, REGISTRATION.replace("\n", newline).encode() + original)
+                    self.assertLess(candidate.index(b"[sm2_bme280]"), candidate.index(b"[include "))
+                    self.assertLess(candidate.index(b"[sm2_sgp40]"), candidate.index(b"[include "))
+                else:
+                    self.assertEqual(candidate.replace(b"sensor_type: SM2_", b"sensor_type: "), original)
                 self.assertEqual(digest(candidate), entry["candidate_sha256"])
         for path, data in before.items():
             self.assertEqual(path.read_bytes(), data)
@@ -89,7 +95,13 @@ class StageTests(unittest.TestCase):
         self.runtime["temperature_sensor SGP_IN"]["voc_mean"] = "12345"
         files, candidates = plan(self.main, self.runtime)
         self.assertIn(b"voc_mean = 12345", files[self.main.resolve()])
-        self.assertNotIn(self.main.resolve(), candidates)
+        self.assertTrue(candidates[self.main.resolve()].endswith(files[self.main.resolve()]))
+
+    def test_existing_registration_is_rejected(self):
+        with self.main.open("a") as file:
+            file.write("[sm2_bme280]\n")
+        with self.assertRaisesRegex(ValueError, "registration already present"):
+            plan(self.main, self.runtime)
 
     def test_stage_cannot_be_loaded_by_config_globs_or_overwrite_existing_directory(self):
         with self.assertRaisesRegex(ValueError, "outside active"):

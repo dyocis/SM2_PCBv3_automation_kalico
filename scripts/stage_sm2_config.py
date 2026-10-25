@@ -14,6 +14,7 @@ TARGETS = {"temperature_sensor " + name: kind for name, kind in (
     ("SGP_IN", "SGP40"), ("SGP_OUT", "SGP40"))}
 HEADER = re.compile(r"^\[([^\]]+)\]\s*$")
 FACTORY = re.compile(r"^(\s*sensor_type\s*[:=]\s*)(BME280|SGP40)(\s*(?:#.*)?)(\r?\n)?$")
+REGISTRATION = "# Register opt-in ambient sensor factories before sensor sections.\n[sm2_bme280]\n\n[sm2_sgp40]\n\n"
 
 
 def digest(data):
@@ -38,6 +39,8 @@ def inspect_tree(main, staging=None):
         def finish(end):
             if current is None:
                 return
+            if current in ("sm2_bme280", "sm2_sgp40"):
+                raise ValueError("Prototype registration already present: " + current)
             if current.startswith("include "):
                 spec = current[8:].strip()
                 include_path = path.parent / spec
@@ -102,7 +105,12 @@ def plan(main, runtime_config, staging=None):
         index = target["line"]
         match = FACTORY.match(lines[index])
         lines[index] = match[1] + "SM2_" + match[2] + match[3] + (match[4] or "")
-    return files, {path: "".join(lines).encode("utf-8") for path, lines in staged.items()}
+    candidates = {path: "".join(lines).encode("utf-8") for path, lines in staged.items()}
+    root = main.resolve(strict=True)
+    original = candidates.get(root, files[root])
+    newline = "\r\n" if b"\r\n" in original else "\n"
+    candidates[root] = REGISTRATION.replace("\n", newline).encode() + original
+    return files, candidates
 
 
 def stage(main, runtime_config, output):
@@ -140,6 +148,7 @@ def stage(main, runtime_config, output):
     # Written last: a partial directory without this manifest is not a completed stage.
     (output / "changes.diff").write_text("".join(diffs), encoding="utf-8")
     manifest = dict(schema=1, installation_allowed=False, scope="configuration-only",
+                    sensor_registration=["sm2_bme280", "sm2_sgp40"],
                     files=entries, runtime_config_sha256=digest(json.dumps(runtime_config, sort_keys=True).encode()),
                     remaining=["Complete host/module/firmware recovery bundle",
                                "Fresh live preflight and reviewed deployment",

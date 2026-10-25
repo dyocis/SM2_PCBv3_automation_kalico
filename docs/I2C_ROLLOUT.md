@@ -69,9 +69,11 @@ These intentional restrictions require manual review of unfamiliar layouts;
 this is not a replacement for Kalico's full configuration parser.
 
 It writes byte-for-byte copies of every visited config file, separate candidate
-files, a unified diff, and a checksum manifest into a new directory. Only the
-four sensor factories change; comments, line endings and SAVE_CONFIG data stay
-intact. The destination must be outside active config directories and include
+files, a unified diff, and a checksum manifest into a new directory. The four
+sensor factories change, and `[sm2_bme280]` / `[sm2_sgp40]` registration sections
+are prepended to the root config so they load before the sensor sections.
+Existing comments, line endings and SAVE_CONFIG data stay intact. Old stages
+without registration must be rebuilt. The destination must be outside active config directories and include
 glob search roots. Existing directories are never overwritten. Backup and
 candidate checksums are read back, and the include tree is inspected again
 before the completion manifest is written. A directory without a manifest is
@@ -93,6 +95,28 @@ The install must reject a partial or mixed candidate. An old firmware cannot
 support these drivers, and the reporting firmware alone does not change the
 old sensor drivers' behavior. Preserve output-off and cooldown routes when
 sensor readiness is false. Do not enable outputs merely to validate a stage.
+
+### Host-file deployment and rollback plan
+
+`scripts/prepare_sm2_deployment.py --recovery RECOVERY --candidate CHECKOUT
+--output NEW_DIRECTORY` verifies the recovery bundle and creates a separate
+review directory. It includes sensor-selection/registration edits, all active
+automation config candidates, five matching SM2 host modules, and the two
+dashboard/history files. Each existing destination must have recovery evidence;
+new destinations must appear as originally absent in the module inventory.
+Missing/duplicate active macro files and overlapping edits require review.
+
+The plan contains forward and rollback payloads with checksums, destination and
+resolved paths, original link/permission metadata where captured, and a unified
+diff. Review every macro diff: whole-file macro candidates may replace local
+customizations and are not automatically approved merges. Configuration copies
+alone do not preserve the permissions/link topology of every original include;
+that evidence must be completed before implementing an automatic restore.
+
+This command never applies files, changes services, or flashes firmware. Its
+`installation_allowed` field remains false. A stopped-host apply/rollback
+executor, verification of matching SM firmware and attended acceptance are still
+required. Do not treat a generated plan as an executable install script.
 
 ## Attended deployment and acceptance
 
