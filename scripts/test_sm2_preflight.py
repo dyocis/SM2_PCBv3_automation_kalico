@@ -25,7 +25,7 @@ class PreflightTests(unittest.TestCase):
         self.info = dict(app="Kalico", state="ready", klipper_path=str(self.root),
                          software_version="v2026.10.00-157-g3ec85e6a")
         config = {"mcu SM": dict(is_non_critical="True", serial=
-                  "/dev/serial/by-id/usb-Klipper_stm32g0b1xx_TEST-if00")}
+                  str(Path("/dev/serial/by-id") / "usb-Klipper_stm32g0b1xx_TEST-if00"))}
         for side, bus in (("IN", "i2c1_PB8_PB9"), ("OUT", "i2c2_PB10_PB11")):
             config["temperature_sensor BME_" + side] = dict(sensor_type="BME280",
                 i2c_mcu="SM", i2c_bus=bus, i2c_address="119")

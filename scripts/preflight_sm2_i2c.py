@@ -50,7 +50,8 @@ def audit(klipper, info, status, head=git_head):
     require(str(sm.get("is_non_critical", "")).lower() in ("true", "1"),
             "SM MCU must be explicitly non-critical")
     serial = sm.get("serial", "")
-    require(serial.startswith("/dev/serial/by-id/usb-Klipper_stm32g0b1xx_"),
+    require(Path(serial).parent.as_posix() == "/dev/serial/by-id"
+            and Path(serial).name.startswith("usb-Klipper_stm32g0b1xx_"),
             "SM serial identity does not match the G0B1 USB development target")
     evidence["sm_serial"] = serial
     evidence["sm_runtime"] = status.get("mcu SM", {})
