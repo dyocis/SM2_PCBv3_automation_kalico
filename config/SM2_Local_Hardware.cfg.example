@@ -15,6 +15,7 @@
 #####################################################################
 
 [mcu SM]
+is_non_critical: True
 serial: /dev/serial/by-id/REPLACE_WITH_YOUR_PCB_SERIAL
 # canbus_uuid: REPLACE_WITH_YOUR_CAN_UUID
 

@@ -673,6 +673,19 @@ restart_services() {
     fi
 }
 
+install_connection_guard() {
+    local source="${INSTALL_DIR}/klippy/extras/sm2_connection.py"
+    local target="${KLIPPER_PATH}/klippy/extras/sm2_connection.py"
+    [[ -f "${source}" && -d "${KLIPPER_PATH}/klippy/extras" ]] || die "SM2 connection module or Kalico extras directory missing."
+    if [[ -e "${target}" || -L "${target}" ]]; then
+        [[ -L "${target}" && "$(readlink -f "${target}")" == "$(readlink -f "${source}")" ]] \
+            || die "Existing ${target} is not owned by this checkout; preserve it and resolve the conflict before installing."
+    else
+        ln -s "${source}" "${target}"
+    fi
+    warn "Experimental Kalico connection guard: not complete I2C or sensor-driver recovery. Existing [mcu SM] must have is_non_critical: True."
+}
+
 main() {
     log "Personal project notice: this software is provided as-is, without a promised update schedule. You are responsible for your printer, wiring, configuration, and installed software."
     if [[ "${PROJECT_BRANCH}" != "main" ]]; then
@@ -689,6 +702,7 @@ main() {
     detect_config_root
     detect_moonraker_config
     checkout_project
+    install_connection_guard
     install_dependencies
     write_local_config
     write_moonraker_updater

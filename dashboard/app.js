@@ -26,8 +26,10 @@
     "fan_generic Filter": ["speed", "rpm"],
     "temperature_sensor BME_IN": ["temperature"],
     "temperature_sensor BME_OUT": ["temperature"],
-    "bme280 BME_IN": ["pressure", "humidity", "temperature"],
-    "bme280 BME_OUT": ["pressure", "humidity", "temperature"],
+    "bme280 BME_IN": null,
+    "bme280 BME_OUT": null,
+    "sgp40 SGP_IN": null,
+    "sgp40 SGP_OUT": null,
     "temperature_sensor SGP_IN": ["temperature"],
     "temperature_sensor SGP_OUT": ["temperature"],
     "temperature_sensor _SM_PCB": ["temperature"],
@@ -295,6 +297,13 @@
     render();
   }
 
+  function sensorValue(driver, key, ...legacyValues) {
+    if (Object.prototype.hasOwnProperty.call(driver, "valid")) {
+      return driver.valid === true ? numberOr(driver[key]) : null;
+    }
+    return numberOr(...legacyValues);
+  }
+
   function buildViewModel() {
     const sm = state.objects["gcode_macro SM_LED_STATE"] || {};
     const fan = state.objects["fan_generic Filter"] || {};
@@ -309,10 +318,10 @@
     const print = state.objects.print_stats || {};
     const webhooks = state.objects.webhooks || {};
 
-    const tempIn = numberOr(bmeIn.temperature, sm.temp_in);
-    const tempOut = numberOr(bmeOut.temperature, sm.temp_out);
-    const vocIn = numberOr(sgpIn.temperature, sm.voc_in);
-    const vocOut = numberOr(sgpOut.temperature, sm.voc_out);
+    const tempIn = sensorValue(bmeInFull, "temperature", bmeIn.temperature, sm.temp_in);
+    const tempOut = sensorValue(bmeOutFull, "temperature", bmeOut.temperature, sm.temp_out);
+    const vocIn = sensorValue(state.objects["sgp40 SGP_IN"] || {}, "gas", sgpIn.temperature, sm.voc_in);
+    const vocOut = sensorValue(state.objects["sgp40 SGP_OUT"] || {}, "gas", sgpOut.temperature, sm.voc_out);
     const fanSpeed = clamp(numberOr(fan.speed, sm.last_filter_speed, 0), 0, 1);
     const vocDelta = validNumber(vocIn) && validNumber(vocOut) ? vocIn - vocOut : null;
     const efficiency = validNumber(vocIn) && vocIn > 0 && validNumber(vocOut)
@@ -378,10 +387,10 @@
       postPrintVentTarget: numberOr(sm.post_print_vent_target_temp, 35),
       postPrintVentMinutes: numberOr(sm.post_print_vent_max_minutes, 60),
       postPrintVentActive: truthy(sm.post_print_vent_active),
-      pressureIn: numberOr(bmeInFull.pressure),
-      pressureOut: numberOr(bmeOutFull.pressure),
-      humidityIn: numberOr(bmeInFull.humidity),
-      humidityOut: numberOr(bmeOutFull.humidity),
+      pressureIn: sensorValue(bmeInFull, "pressure", bmeInFull.pressure),
+      pressureOut: sensorValue(bmeOutFull, "pressure", bmeOutFull.pressure),
+      humidityIn: sensorValue(bmeInFull, "humidity", bmeInFull.humidity),
+      humidityOut: sensorValue(bmeOutFull, "humidity", bmeOutFull.humidity),
       pcbTemp: numberOr(pcb.temperature),
       mcuTemp: numberOr(smMcu.temperature),
       fanReady: truthy(sm.fan_ready),
@@ -429,8 +438,8 @@
     els.fanPercent.textContent = `${fanPercent}%`;
     els.fanRpm.textContent = `${formatInteger(vm.rpm)} RPM`;
 
-    els.vocStatePill.textContent = VOC_LABELS[vm.vocState];
-    els.vocStatePill.dataset.level = String(vm.vocState);
+    els.vocStatePill.textContent = validNumber(vm.vocIn) ? VOC_LABELS[vm.vocState] : "UNAVAILABLE";
+    els.vocStatePill.dataset.level = validNumber(vm.vocIn) ? String(vm.vocState) : "0";
     els.vocIn.textContent = formatInteger(vm.vocIn);
     els.vocOut.textContent = formatInteger(vm.vocOut);
     els.vocDelta.textContent = validNumber(vm.vocDelta) ? `${vm.vocDelta >= 0 ? "−" : "+"}${formatInteger(Math.abs(vm.vocDelta))} index` : "—";
@@ -447,7 +456,7 @@
     els.highLabel.textContent = `HIGH ${formatInteger(vm.vocHigh)}`;
     els.emergencyLabel.textContent = `EMERG ${formatInteger(vm.vocEmergency)}`;
 
-    els.coolingPill.textContent = vm.chamberLatched ? "LATCHED" : "STANDBY";
+    els.coolingPill.textContent = !validNumber(vm.tempIn) ? "UNAVAILABLE" : vm.chamberLatched ? "LATCHED" : "STANDBY";
     els.coolingPill.dataset.level = vm.chamberLatched ? "2" : "0";
     els.tempIn.textContent = formatDecimal(vm.tempIn);
     els.tempOut.textContent = formatDecimal(vm.tempOut);

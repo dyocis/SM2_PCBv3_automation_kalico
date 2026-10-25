@@ -12,6 +12,38 @@ permissions:
   contents: read
 
 jobs:
+  sm2-firmware:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        kalico: [3ec85e6aae670182955cf9f4cdc968cf1fba1315, c127b54c3fdfbf5fe5af2615a11afb90b0aa686f]
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@v7
+        with:
+          path: candidate
+      - name: Check out pinned Kalico firmware
+        uses: actions/checkout@v7
+        with:
+          repository: KalicoCrew/kalico
+          ref: ${{ matrix.kalico }}
+          path: kalico
+      - name: Install ARM compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - name: Prepare opt-in reporting source
+        run: |
+          python3 candidate/scripts/prepare_sm2_i2c.py kalico/src/i2ccmds.c --output kalico/src/i2ccmds.sm2.c
+          mv kalico/src/i2ccmds.sm2.c kalico/src/i2ccmds.c
+          cp candidate/firmware/sm2-g0b1.config kalico/.config
+      - name: Build complete SM2 firmware
+        working-directory: kalico
+        run: |
+          make olddefconfig
+          make -j2
+          python3 ../candidate/scripts/verify_sm2_build.py .
+
   repository:
     runs-on: ubuntu-latest
     steps:
@@ -43,6 +75,24 @@ jobs:
           python3 scripts/test_temperature_auto.py
           python3 scripts/test_uv_thermal.py
           python3 scripts/test_idle_timeout.py
+          python3 scripts/test_sm2_connection.py
+          python3 scripts/test_sm2_sensor_guards.py
 
       - name: Validate repository content
         run: python3 scripts/validate_repo.py
+
+      - name: Test opt-in I2C reporting and legacy error behavior
+        env:
+          CC: gcc
+        run: |
+          python3 scripts/test_sm2_i2c.py
+          python3 scripts/test_sm2_bme280.py
+          python3 scripts/test_sm2_sgp40.py
+          python3 scripts/test_sm2_sensor_health.py
+          python3 scripts/test_sm2_real_gia.py
+          python3 scripts/test_sm2_preflight.py
+          python3 scripts/test_sm2_config_stage.py
+          python3 scripts/test_sm2_recovery.py
+          python3 scripts/test_sm2_deployment.py
+          python3 scripts/test_sm2_executor.py
+          python3 dashboard/sensor_validity_test.py

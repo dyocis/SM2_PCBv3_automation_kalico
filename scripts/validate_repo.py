@@ -168,6 +168,7 @@ def validate_configs(errors: list[str]) -> None:
     object_reference = re.compile(r'printer\["([^"]+)"\]')
     optional_runtime_references = {
         "output_pin uv",
+        "output_pin peltier",
         "temperature_sensor SM_Peltier_Hot_Side",
         "temperature_sensor SM_Peltier_Cold_Side",
         "temperature_sensor SM_UV_LEDs",
