@@ -3,6 +3,31 @@
 The candidate remains uninstalled. This document defines the installation
 contract; it is not authorization to flash a board or a completed installer.
 
+## Read-only baseline audit
+
+`scripts/preflight_sm2_i2c.py` is the first part of preflight. Run it from a
+complete candidate checkout on the printer host; it needs the bundled source
+fixtures. It only performs local Moonraker GET requests, reads source files,
+and runs `git rev-parse`. It prints JSON to standard output and exits nonzero
+on missing or mismatched evidence. It has no install or restart option.
+
+```sh
+python3 scripts/preflight_sm2_i2c.py --klipper-path "$HOME/klipper"
+```
+
+It checks ready/idle/print state, confirmed UV/Peltier off, no pending config
+save, the running host path/version, resolved installed BME/SGP/GIA source,
+repository revisions, and the four sensor definitions returned by Kalico.
+It deliberately accepts only the original baseline factories and the
+development printer's bus layout. Mixed/previously installed prototypes and
+additional SM I2C devices require review instead of automatic acceptance.
+
+`baseline_checks_passed: true` is evidence for staging only.
+`installation_allowed` is always false. The script does not yet resolve the
+on-disk include tree, prove that files match the loaded runtime, identify the
+running firmware protocol, verify a recovery bundle, or establish hardware
+safety. A saved report is not proof that a printer remains idle later.
+
 ## Preflight before any write
 
 - Require an idle printer and record the running host version, SM MCU version,
