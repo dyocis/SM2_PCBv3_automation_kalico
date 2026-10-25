@@ -96,6 +96,45 @@ sensor readiness is false. Do not enable outputs merely to validate a stage.
 
 ## Attended deployment and acceptance
 
+### Recovery bundle tooling
+
+On the printer host, a passing baseline audit can write a new private runtime
+snapshot with `--evidence-output /path/to/runtime-evidence.json`. This contains
+the full loaded configuration; keep it with private backups rather than
+committing it to a public repository. Existing evidence files are not overwritten.
+
+`scripts/bundle_sm2_recovery.py` accepts `--klipper`, `--automation`, `--config`,
+`--firmware`, `--evidence`, and `--output` paths. The firmware path must contain
+the saved original SM build's `.config` and `out/klipper.bin`, `klipper.elf`, and
+`klipper.dict`. The automation path must identify the installed project, not a
+separate unused clone. The config path must match the host's reported root.
+
+The tool reruns the baseline checks against the supplied snapshot, stages the
+config copies/diff, and captures the installed BME/SGP/GIA/I2C sources,
+dashboard/history code, saved-variable file, existing SM2 modules and original
+firmware files. Its inventory records which prototype module paths were absent,
+and records resolved source paths, direct symlink targets and file permissions
+for existing files. Copies are verified and sources rechecked before writing
+the completion manifest. The destination must be new and outside source trees.
+
+The saved firmware dictionary must match the snapshot's SM firmware version
+and G0B1 identity; build settings must match the reviewed 8 MHz USB/no-offset
+profile. These checks do **not** prove the saved binary is the flashed image.
+There is no MCU flash readback or claim that arbitrary binary/dictionary pairs
+are authentic. Preserve the original known-good build artifacts.
+
+After copying the directory to the PC, check its stored files with:
+
+```sh
+python3 scripts/verify_sm2_recovery.py /path/to/recovery-directory
+```
+
+This verifies artifact, runtime-evidence and configuration checksums and rejects
+paths escaping the bundle. It does not restore files or grant installation
+permission. It is a migration-file recovery set, not a full OS/Python environment
+backup. Restore instructions must use the recorded link targets and permissions;
+do not blindly replace a symlink with a regular file or delete pre-existing modules.
+
 After hardware work is complete and the user is present, verify idle state
 again, stop the host, install the matched candidate, flash only the identified
 SM MCU, and restart. Check the running SM protocol, four sensor statuses,

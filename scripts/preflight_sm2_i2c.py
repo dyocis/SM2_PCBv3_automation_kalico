@@ -116,6 +116,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--klipper-path", type=Path, default=Path.home() / "klipper")
     parser.add_argument("--port", type=int, default=7125)
+    parser.add_argument("--evidence-output", type=Path,
+                        help="Write a new private runtime snapshot after a passing audit")
     args = parser.parse_args()
 
     def get(path):
@@ -128,6 +130,9 @@ def main():
                  "mcu%20SM", "output_pin%20peltier", "output_pin%20uv")
         status = get("/printer/objects/query?" + "&".join(names))["status"]
         report = audit(args.klipper_path, info, status)
+        if report["baseline_checks_passed"] and args.evidence_output:
+            with args.evidence_output.open("x", encoding="utf-8") as evidence:
+                json.dump(dict(info=info, status=status), evidence, indent=2)
     except (OSError, ValueError, KeyError) as exc:
         report = dict(baseline_checks_passed=False, installation_allowed=False,
                       errors=["Unable to obtain live audit evidence: " + str(exc)])
