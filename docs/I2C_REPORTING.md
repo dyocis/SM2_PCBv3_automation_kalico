@@ -1,7 +1,7 @@
 # Experimental SM2 I2C reporting
 
 This is an offline development candidate, not installed on the printer and not
-enabled by the installer. Sensor integration and hardware validation are still
+enabled by the installer. Installation integration and hardware validation are still
 required. The supported source is Kalico commit
 `3ec85e6aae670182955cf9f4cdc968cf1fba1315`.
 
@@ -43,7 +43,7 @@ creates a new file only. It accepts the exact pinned source (normalizing line
 endings), or the same candidate for idempotence, and refuses unknown source or
 an existing output. It does not install, build or flash firmware.
 
-## Remaining integration work
+## Sensor integration candidate
 
 ### Fault notifications and statistics
 
@@ -73,8 +73,8 @@ wrappers and cached macro numbers. Invalid readings appear unavailable and
 cannot produce efficiency estimates or accepted environmental history samples.
 A recovered driver supplies the new values directly. Drivers without a
 validity field retain their existing display behavior; that compatibility
-path does not certify their readings as fresh. Automation macro validity and
-output reconciliation remain separate unfinished work.
+path does not certify their readings as fresh. Automation guards are described
+below; physical output reconciliation remains unfinished work.
 
 An uninstalled `sm2_bme280.py` prototype registers the separate `SM2_BME280`
 factory for ambient `temperature_sensor` sections only. It subclasses the
@@ -119,17 +119,17 @@ interruptions exceeding ten minutes require restart instead of automatically
 reusing old learning. The upstream file is retained as `sgp40_gia.py` in the
 test fixtures. These are software integration tests, not accuracy validation.
 
-- Integrate the prototype drivers with installer preflight/version checks and
-  validity-aware automation/history. Ordinary sensor instances must retain
+- Integrate the prototype drivers with installer preflight/version checks.
+  Ordinary sensor instances must retain
   their original transport. Do not enable either prototype with numeric-only
   consumers. Missing readings must not be interpreted as zero.
-- Validate both sensors together with the actual gas-index algorithm and
-  assess behavior after extended sample gaps, including calibration readiness.
+- Validate calibration readiness on hardware following the software tests of
+  both drivers with the actual gas-index algorithm and extended sample gaps.
 - Reconcile outputs and automation with driver failure/restart states.
   Reconnection or restored measurements must not re-arm cooling or UV.
 - Validate the STM32 bus after NACK and timeout. Reporting a failure does not
   establish that a stuck bus has recovered.
-- Build the complete G0B1 firmware and validate attended hardware behavior
+- Require the complete G0B1 firmware build and validate attended hardware behavior
   while the printer is idle before enabling the candidate.
 
 The command harness checks protocol logic with simulated buses, not STM32
@@ -158,5 +158,17 @@ run without ambient readings, using -1 for unavailable chamber evidence.
 This does not make MCU disconnection physically safe: connection loss still
 prevents hardware commands. It also cannot retract already-rendered/queued
 commands. Attended validation of timing, actual output state and airflow is
-required before deployment. Installer version checks and a complete firmware
-build are still outstanding.
+required before deployment. Installer version checks are still outstanding.
+
+## Complete firmware build check
+
+The Validate workflow builds pinned Kalico with the reporting extension using
+an ARM compiler. `firmware/sm2-g0b1.config` selects STM32G0B1, an 8 MHz crystal,
+USB PA11/PA12 and no bootloader offset, matching the configuration reported for
+the development printer. `scripts/verify_sm2_build.py` checks the resolved
+configuration, binary, and compiled protocol dictionary. A different board
+must have its own verified configuration before flashing.
+
+This CI job never connects to or flashes a printer and does not publish a
+firmware release. Passing compilation does not demonstrate bus recovery,
+electrical behavior, sensor accuracy, or output safety on hardware.

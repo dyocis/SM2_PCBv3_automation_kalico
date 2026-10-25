@@ -56,9 +56,11 @@ availability, connection state, restart requirement, and reason.
 
 This is an uninstalled software-test candidate, not a complete fault-tolerance
 implementation. It does not cancel commands already rendered/queued, ensure
-physical outputs shut off, stop third-party sensor/LED callbacks, establish
-sensor freshness, or change firmware shutdown behavior. Existing status caches
-and dashboard history still need validity handling. Initial MCU absence may
+physical outputs shut off, stop third-party sensor/LED callbacks, or change
+legacy firmware shutdown behavior. Opt-in sensor drivers now supply validity
+to the automation gate, dashboard and history recorder; legacy sensors still
+provide no freshness guarantee. See `I2C_REPORTING.md` for the candidate's
+warm-up and fault-latch behavior. Initial MCU absence may
 still prevent sensor-driver startup before the gate can act. Direct `SET_PIN`,
 `SET_FAN_SPEED`, `SET_SERVO`, and sensor commands bypass the macro gate.
 Even an emergency macro is skipped when the gate is inhibited: that cannot be
