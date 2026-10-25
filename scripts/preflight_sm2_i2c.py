@@ -11,6 +11,10 @@ from urllib.request import urlopen
 from prepare_sm2_i2c import BASE_COMMIT, ROOT, normalized
 
 SGP_COMMIT = "d07664022fd24a6b0f26305d88dfbbd84213d993"
+SUPPORTED_HOSTS = {
+    BASE_COMMIT: "v2026.10.00-157-g3ec85e6a",
+    "c127b54c3fdfbf5fe5af2615a11afb90b0aa686f": "v2026.10.00-159-gc127b54c",
+}
 SENSORS = ("BME_IN", "BME_OUT", "SGP_IN", "SGP_OUT")
 
 
@@ -31,14 +35,14 @@ def audit(klipper, info, status, head=git_head):
     klipper = klipper.resolve()
     require(info.get("app") == "Kalico", "Running host is not identified as Kalico")
     require(info.get("state") == "ready", "Printer is not ready")
-    require(info.get("software_version") == "v2026.10.00-157-g3ec85e6a",
+    require(info.get("software_version") in SUPPORTED_HOSTS.values(),
             "Running host version differs from the supported clean baseline")
     require(Path(info.get("klipper_path", "")).resolve() == klipper,
             "Audited checkout differs from running host path")
     require(status.get("webhooks", {}).get("state") == "ready", "Host status is not ready")
     require(status.get("print_stats", {}).get("state") in ("standby", "complete", "cancelled"),
             "Print state is missing, active, paused, or failed")
-    require(status.get("idle_timeout", {}).get("state") == "Idle", "Printer is not idle")
+    require(status.get("idle_timeout", {}).get("state") in ("Idle", "Ready"), "Printer is not idle")
     for pin in ("peltier", "uv"):
         require(status.get("output_pin " + pin, {}).get("value") == 0,
                 "Output %s is not confirmed off" % pin)
@@ -84,7 +88,9 @@ def audit(klipper, info, status, head=git_head):
             errors.append("Prototype factory already configured: " + name)
     try:
         evidence["kalico_commit"] = head(klipper)
-        require(evidence["kalico_commit"] == BASE_COMMIT, "Unsupported Kalico checkout revision")
+        require(evidence["kalico_commit"] in SUPPORTED_HOSTS, "Unsupported Kalico checkout revision")
+        require(SUPPORTED_HOSTS.get(evidence["kalico_commit"]) == info.get("software_version"),
+                "Running host version does not match audited checkout")
         extras = klipper / "klippy/extras"
         sources = ((extras / "bme280.py", "kalico_bme280.py"),
                    (extras / "sgp40/__init__.py", "sgp40_upstream.py"),

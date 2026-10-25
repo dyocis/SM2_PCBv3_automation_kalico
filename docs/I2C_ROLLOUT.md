@@ -30,10 +30,23 @@ safety. A saved report is not proof that a printer remains idle later.
 
 ## Preflight before any write
 
+The live printer was subsequently updated to Kalico
+`c127b54c3fdfbf5fe5af2615a11afb90b0aa686f` (v2026.10.00-159). Review of the two
+intervening commits found changes to load-cell/bulk-sensor handling, with no
+changes to the SM2 I2C firmware, BME280, bus or MCU interfaces used here. Both
+exact host revisions are admitted by preflight with matching version strings,
+and both receive complete SM2 firmware builds in CI. Other revisions still
+require review. The original source fixtures remain unchanged.
+
+Kalico idle-timeout `Ready` is accepted alongside `Idle`: `Ready` follows an
+empty motion queue and free G-code mutex, before the configured idle timeout
+expires. Print state and output-off checks still apply. `Printing`, paused or
+unknown states are rejected. This is a snapshot, not a lock against later work.
+
 - Require an idle printer and record the running host version, SM MCU version,
   configured serial identity, and enabled sensor sections from Moonraker.
-- Verify the Kalico checkout is the supported commit
-  `3ec85e6aae670182955cf9f4cdc968cf1fba1315`. Verify the loaded BME280 source
+- Verify the Kalico checkout is a reviewed supported commit (including original
+  `3ec85e6aae670182955cf9f4cdc968cf1fba1315`). Verify the loaded BME280 source
   against the pinned fixture and the loaded SGP40 package against the supported
   `thetic/klipper-sgp40` revision
   `d07664022fd24a6b0f26305d88dfbbd84213d993`, including its gas-index module.

@@ -14,6 +14,9 @@ permissions:
 jobs:
   sm2-firmware:
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        kalico: [3ec85e6aae670182955cf9f4cdc968cf1fba1315, c127b54c3fdfbf5fe5af2615a11afb90b0aa686f]
     steps:
       - name: Check out candidate
         uses: actions/checkout@v7
@@ -23,7 +26,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: KalicoCrew/kalico
-          ref: 3ec85e6aae670182955cf9f4cdc968cf1fba1315
+          ref: ${{ matrix.kalico }}
           path: kalico
       - name: Install ARM compiler
         run: |

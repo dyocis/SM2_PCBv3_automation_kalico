@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from preflight_sm2_i2c import audit, ROOT, BASE_COMMIT, SGP_COMMIT
+from preflight_sm2_i2c import audit, ROOT, BASE_COMMIT, SGP_COMMIT, SUPPORTED_HOSTS
 
 
 class PreflightTests(unittest.TestCase):
@@ -104,6 +104,14 @@ class PreflightTests(unittest.TestCase):
         report = self.run_audit(head=lambda path: "unsupported")
         self.assertIn("Unsupported Kalico checkout revision", report["errors"])
         self.assertIn("Unsupported installed SGP40 revision", report["errors"])
+
+    def test_updated_reviewed_host_and_ready_idle_state(self):
+        updated = "c127b54c3fdfbf5fe5af2615a11afb90b0aa686f"
+        self.info["software_version"] = SUPPORTED_HOSTS[updated]
+        self.status["idle_timeout"]["state"] = "Ready"
+        report = self.run_audit(head=lambda path: updated if path == self.root else SGP_COMMIT)
+        self.assertEqual(report["errors"], [])
+        self.assertFalse(self.run_audit()["baseline_checks_passed"])
 
     def test_mixed_factories_wrong_peer_and_extra_bus_device_fail(self):
         config = self.status["configfile"]["config"]
