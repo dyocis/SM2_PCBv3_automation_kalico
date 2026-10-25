@@ -91,4 +91,5 @@ jobs:
           python3 scripts/test_sm2_config_stage.py
           python3 scripts/test_sm2_recovery.py
           python3 scripts/test_sm2_deployment.py
+          python3 scripts/test_sm2_executor.py
           python3 dashboard/sensor_validity_test.py

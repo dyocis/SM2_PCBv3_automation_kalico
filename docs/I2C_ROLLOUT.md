@@ -116,8 +116,39 @@ unexpected path or permission changes since preparation.
 
 This command never applies files, changes services, or flashes firmware. Its
 `installation_allowed` field remains false. A stopped-host apply/rollback
-executor, verification of matching SM firmware and attended acceptance are still
-required. Do not treat a generated plan as an executable install script.
+executor is described below; matching SM firmware and attended acceptance are
+still required. Do not treat a generated plan as approval to install it.
+
+### Stopped-host file executor
+
+`scripts/apply_sm2_deployment.py` defaults to `--action check`. It requires
+`--plan DIRECTORY`, `--recovery DIRECTORY`, and `--reviewed-sha256 HASH`, where
+HASH is the SHA256 of the exact `plan.json` whose full diff was reviewed.
+Explicit `--action apply` installs its host files; `--action rollback` restores
+only journal-owned changes. Run as the file-owning user on Linux, not root.
+
+The executor never stops/starts services or flashes firmware. It requires
+`klipper.service` and any installed `nevermore-history.service` to be
+inactive/dead, and repeats that check before each destination operation. Do
+not restart services concurrently. It checks recovery/payload hashes, current
+file contents, resolved paths, symlinks, permissions and ownership before
+writing. A per-user lock excludes other executor runs, even from other plans.
+
+Writes use same-directory temporary files and atomic replacement, retaining
+existing mode and group. A durable `execution.json` records intended file
+changes before replacement. Repeating apply can finish an interrupted apply;
+rollback can restore a partial apply. Originally absent modules are deleted
+only if journal-owned and still exactly equal to the installed payload.
+Unexpected user edits stop recovery rather than being overwritten. Once
+rollback starts, finish rollback and prepare a new plan before applying again.
+
+Atomicity is per file, not across the whole deployment. Leave services stopped
+after a failure, preserve the journal/plan/recovery directories, and use the
+same verified plan to resume or roll back. Do not delete the journal to bypass
+a conflict. Repeated service checks cannot prevent an external restart between
+a check and a write. Manually started host/recorder processes are outside the
+systemd check and must also be stopped. Full deployment still requires the
+separate reviewed firmware operation and attended hardware validation.
 
 ## Attended deployment and acceptance
 
