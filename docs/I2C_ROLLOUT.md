@@ -23,7 +23,7 @@ development printer's bus layout. Mixed/previously installed prototypes and
 additional SM I2C devices require review instead of automatic acceptance.
 
 `baseline_checks_passed: true` is evidence for staging only.
-`installation_allowed` is always false. The script does not yet resolve the
+`installation_allowed` is always false. This baseline script does not resolve the
 on-disk include tree, prove that files match the loaded runtime, identify the
 running firmware protocol, verify a recovery bundle, or establish hardware
 safety. A saved report is not proof that a printer remains idle later.
@@ -49,6 +49,39 @@ safety. A saved report is not proof that a printer remains idle later.
   Preserve saved VOC baselines and local hardware/thermal settings.
 
 ## Stage and review together
+
+The configuration-only staging tool is now available:
+
+```sh
+python3 scripts/stage_sm2_config.py \
+  --config "$HOME/printer_data/config/printer.cfg" \
+  --runtime-config /path/to/runtime-config.json \
+  --output "$HOME/sm2-config-stage-NEW"
+```
+
+The runtime JSON must contain the `configfile.config` object from a fresh
+Moonraker query, not the surrounding response. The tool resolves ordinary
+nested includes and sorted globs, records the source of each target section,
+and compares all four sensors' transport/reference/factory settings to that
+runtime object. It rejects missing, repeated, recursive or parameterized
+includes, inline includes, duplicate target sections and partial migrations.
+These intentional restrictions require manual review of unfamiliar layouts;
+this is not a replacement for Kalico's full configuration parser.
+
+It writes byte-for-byte copies of every visited config file, separate candidate
+files, a unified diff, and a checksum manifest into a new directory. Only the
+four sensor factories change; comments, line endings and SAVE_CONFIG data stay
+intact. The destination must be outside active config directories and include
+glob search roots. Existing directories are never overwritten. Backup and
+candidate checksums are read back, and the include tree is inspected again
+before the completion manifest is written. A directory without a manifest is
+an incomplete stage and must not be used for installation.
+
+The source configuration is never modified. The manifest's scope is
+`configuration-only`, and `installation_allowed` remains false. It does not
+back up firmware, modules, external macro snippets or unrelated state files;
+it does not prove the supplied runtime snapshot is current. Complete those
+recovery checks and rerun live preflight before any deployment.
 
 Prepare a manifest and diff containing the firmware extension, `sm2_i2c.py`,
 `sm2_sensor_health.py`, both sensor drivers, the updated `sm2_connection.py`,
