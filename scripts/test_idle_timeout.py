@@ -30,10 +30,11 @@ class IdleTimeoutTests(unittest.TestCase):
         for actual in (0, 0.6, 1):
             for demand in (0, 0.6, 1):
                 with self.subTest(actual=actual, demand=demand):
-                    p = printer_state(fan=actual, uv=actual)
-                    p["gcode_macro SM_LED_STATE"]["uv"] = 0
+                    # Fan transition checks have no active heat source.
+                    p = printer_state(fan=actual, uv=0)
                     fan = render("NEVERMORE_FILTER", p, SPEED=demand)
                     self.assertEqual("SET_FAN_SPEED" in fan, actual != demand)
+                    p["output_pin uv"]["value"] = actual
                     uv = render("NEVERMORE_UV", p, VALUE=demand, AUTO=1)
                     self.assertEqual("SET_PIN PIN=uv" in uv, actual != demand)
                     if demand > 0:

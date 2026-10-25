@@ -155,6 +155,14 @@ Those OFF paths retain fan cooldown. Calibration timers abort instead of
 saving baselines or leaving a preparation phase stuck. Thermal trips still
 run without ambient readings, using -1 for unavailable chamber evidence.
 
+The inhibit and normal OFF paths also inspect the host's `output_pin.value`
+so a stale OFF macro flag cannot conceal a reported energized UV/Peltier pin.
+They establish cooldown before invoking the fan macro. Fan reduction is blocked
+while a pin is reported on or cooldown is active, and calibration cannot reject
+airflow required by those conditions. Ordinary calibration start restrictions
+remain. Host pin status describes commanded state, not electrical feedback;
+this cannot detect a stuck MOSFET, disconnected fan or lost MCU communication.
+
 This does not make MCU disconnection physically safe: connection loss still
 prevents hardware commands. It also cannot retract already-rendered/queued
 commands. Attended validation of timing, actual output state and airflow is

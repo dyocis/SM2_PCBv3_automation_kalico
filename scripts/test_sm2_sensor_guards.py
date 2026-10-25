@@ -6,6 +6,45 @@ from test_uv_thermal import printer_state
 
 
 class GuardTests(unittest.TestCase):
+    def test_inhibit_handles_absent_optional_outputs(self):
+        p = make_printer(active=False)
+        del p["output_pin peltier"]
+        result = self.render("NEVERMORE_SENSOR_INHIBIT", p)
+        self.assertNotIn("NEVERMORE_PELTIER VALUE=0", result)
+        self.assertNotIn("NEVERMORE_UV VALUE=0", result)
+
+    def test_inhibit_observes_pin_values_even_with_cached_flags_off(self):
+        p = make_printer(active=False)
+        p["output_pin peltier"]["value"] = 1
+        p["output_pin uv"] = dict(value=1)
+        result = self.render("NEVERMORE_SENSOR_INHIBIT", p)
+        self.assertIn("NEVERMORE_PELTIER VALUE=0 AUTO=1", result)
+        self.assertIn("NEVERMORE_UV VALUE=0 AUTO=1", result)
+
+    def test_off_cooldown_observes_pin_values_and_sets_hold_before_fan(self):
+        for name, p, pin, flag in (
+            ("NEVERMORE_PELTIER", make_printer(active=False), "peltier", "peltier_cooldown_active"),
+            ("NEVERMORE_UV", printer_state(uv_active=False), "uv", "uv_cooldown_active"),
+        ):
+            with self.subTest(macro=name):
+                p["output_pin " + pin]["value"] = 1
+                p["gcode_macro SM_LED_STATE"]["sgp40_calibration_active"] = 1
+                result = self.render(name, p, VALUE=0)
+                self.assertIn("SET_PIN PIN=%s VALUE=0" % pin, result)
+                self.assertIn("COOLDOWN_COMPLETE", result)
+                self.assertLess(result.index("VARIABLE=%s VALUE=1" % flag),
+                                result.index("NEVERMORE_FILTER SPEED=1"))
+
+    def test_filter_holds_airflow_for_pin_or_cooldown_even_during_calibration(self):
+        for pin_on, cooldown in ((1, 0), (0, 1)):
+            p = printer_state(uv_active=False)
+            p["output_pin uv"]["value"] = pin_on
+            p["gcode_macro SM_LED_STATE"].update(sgp40_calibration_active=1,
+                                               uv_cooldown_active=cooldown)
+            result = self.render("NEVERMORE_FILTER", p, SPEED=0)
+            self.assertIn("VARIABLE=last_filter_speed VALUE=1.0", result)
+            self.assertNotIn("SET_FAN_SPEED FAN=Filter SPEED=0", result)
+
     def render(self, name, printer, **params):
         printer["sm2_connection"] = dict(available=True, sensors_ready=False)
         return JINJA.from_string((MACROS | AUTOMATION)[name]).render(printer=printer, params=params)

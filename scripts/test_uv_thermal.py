@@ -90,7 +90,7 @@ def printer_state(
     if sensor:
         data["temperature_sensor SM_UV_LEDs"] = dict(temperature=led_temp)
     if peltier:
-        data["output_pin peltier"] = {}
+        data["output_pin peltier"] = dict(value=1)
         data["temperature_sensor SM_Peltier_Hot_Side"] = dict(temperature=peltier_hot)
         data["temperature_sensor SM_Peltier_Cold_Side"] = dict(temperature=30)
     return data
