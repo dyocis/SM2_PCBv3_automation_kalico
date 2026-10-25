@@ -12,6 +12,35 @@ permissions:
   contents: read
 
 jobs:
+  sm2-firmware:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out candidate
+        uses: actions/checkout@v7
+        with:
+          path: candidate
+      - name: Check out pinned Kalico firmware
+        uses: actions/checkout@v7
+        with:
+          repository: KalicoCrew/kalico
+          ref: 3ec85e6aae670182955cf9f4cdc968cf1fba1315
+          path: kalico
+      - name: Install ARM compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - name: Prepare opt-in reporting source
+        run: |
+          python3 candidate/scripts/prepare_sm2_i2c.py kalico/src/i2ccmds.c --output kalico/src/i2ccmds.sm2.c
+          mv kalico/src/i2ccmds.sm2.c kalico/src/i2ccmds.c
+          cp candidate/firmware/sm2-g0b1.config kalico/.config
+      - name: Build complete SM2 firmware
+        working-directory: kalico
+        run: |
+          make olddefconfig
+          make -j2
+          python3 ../candidate/scripts/verify_sm2_build.py .
+
   repository:
     runs-on: ubuntu-latest
     steps:

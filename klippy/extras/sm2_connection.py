@@ -6,8 +6,9 @@
 class SM2Connection:
     """Latch loss of SM communication; never silently re-arm automation.
 
-    This observes connection lifecycle only. It does not establish sensor
-    freshness, force physical outputs off, or suppress firmware shutdowns.
+    Observes connection lifecycle and validity reported by opt-in sensors.
+    Legacy sensors provide no freshness guarantee. This monitor does not
+    force physical outputs off or suppress firmware shutdowns.
     """
 
     def __init__(self, config):
