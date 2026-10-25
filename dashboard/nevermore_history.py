@@ -28,8 +28,10 @@ OBJECTS = {
     "fan_generic Filter": ["speed", "rpm"],
     "temperature_sensor BME_IN": ["temperature"],
     "temperature_sensor BME_OUT": ["temperature"],
-    "bme280 BME_IN": ["pressure", "humidity", "temperature"],
-    "bme280 BME_OUT": ["pressure", "humidity", "temperature"],
+    "bme280 BME_IN": None,
+    "bme280 BME_OUT": None,
+    "sgp40 SGP_IN": None,
+    "sgp40 SGP_OUT": None,
     "temperature_sensor SGP_IN": ["temperature"],
     "temperature_sensor SGP_OUT": ["temperature"],
     "temperature_sensor _SM_PCB": ["temperature"],
@@ -190,6 +192,12 @@ def fault_signature(event: dict[str, Any]) -> str:
                       sort_keys=True, separators=(",", ":"))
 
 
+def sensor_value(driver: dict, key: str, legacy: Any) -> float | None:
+    if "valid" in driver:
+        return number(driver.get(key)) if driver["valid"] is True else None
+    return number(legacy)
+
+
 def make_sample(status: dict[str, Any], timestamp_ms: int) -> dict[str, Any]:
     sm = status.get("gcode_macro SM_LED_STATE", {})
     fan = status.get("fan_generic Filter", {})
@@ -206,20 +214,20 @@ def make_sample(status: dict[str, Any], timestamp_ms: int) -> dict[str, Any]:
 
     return {
         "t": timestamp_ms,
-        "vi": number(sgp_in.get("temperature", sm.get("voc_in"))),
-        "vo": number(sgp_out.get("temperature", sm.get("voc_out"))),
-        "ti": number(bme_in_temp.get("temperature", sm.get("temp_in"))),
-        "to": number(bme_out_temp.get("temperature", sm.get("temp_out"))),
+        "vi": sensor_value(status.get("sgp40 SGP_IN", {}), "gas", sgp_in.get("temperature", sm.get("voc_in"))),
+        "vo": sensor_value(status.get("sgp40 SGP_OUT", {}), "gas", sgp_out.get("temperature", sm.get("voc_out"))),
+        "ti": sensor_value(bme_in, "temperature", bme_in_temp.get("temperature", sm.get("temp_in"))),
+        "to": sensor_value(bme_out, "temperature", bme_out_temp.get("temperature", sm.get("temp_out"))),
         # Representative thermistors on the two-module Peltier assembly.
         # Optional installations report -1; store missing data as null.
         "pth": optional_thermistor(sm.get("peltier_hot_temp")),
         "ptc": optional_thermistor(sm.get("peltier_cold_temp")),
         # UV LED assembly thermistor is optional and independent of Peltier.
         "uvt": optional_thermistor(sm.get("uv_led_temp")),
-        "pi": number(bme_in.get("pressure")),
-        "po": number(bme_out.get("pressure")),
-        "hi": number(bme_in.get("humidity")),
-        "ho": number(bme_out.get("humidity")),
+        "pi": sensor_value(bme_in, "pressure", bme_in.get("pressure")),
+        "po": sensor_value(bme_out, "pressure", bme_out.get("pressure")),
+        "hi": sensor_value(bme_in, "humidity", bme_in.get("humidity")),
+        "ho": sensor_value(bme_out, "humidity", bme_out.get("humidity")),
         "fs": number(fan.get("speed", sm.get("last_filter_speed"))) or 0.0,
         "rpm": number(fan.get("rpm", sm.get("last_rpm"))) or 0.0,
         "uv": truthy(sm.get("uv")),

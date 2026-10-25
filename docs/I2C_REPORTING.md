@@ -67,6 +67,15 @@ Existing log retention/rotation controls how long event history survives.
 Notifications are local console/log messages, not phone or email alerts.
 No notification behavior is installed on the running printer yet.
 
+The dashboard and recorder subscribe to the full BME280/SGP40 driver status.
+When a driver supplies `valid`, it takes precedence over legacy temperature
+wrappers and cached macro numbers. Invalid readings appear unavailable and
+cannot produce efficiency estimates or accepted environmental history samples.
+A recovered driver supplies the new values directly. Drivers without a
+validity field retain their existing display behavior; that compatibility
+path does not certify their readings as fresh. Automation macro validity and
+output reconciliation remain separate unfinished work.
+
 An uninstalled `sm2_bme280.py` prototype registers the separate `SM2_BME280`
 factory for ambient `temperature_sensor` sections only. It subclasses the
 pinned Kalico BME280 implementation for calibration and compensation, routes

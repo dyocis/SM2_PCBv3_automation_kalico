@@ -299,5 +299,26 @@ await new Promise((resolve) => setTimeout(resolve, 20));
 assert(scripts.includes("NEVERMORE_SGP_CALIBRATION_CANCEL"), "Active SGP40 calibration did not use the cancel macro");
 assert(scripts.every((script) => !/SET_PIN|SET_FAN_SPEED/.test(script)), "A direct hardware command escaped the macro boundary");
 
+// The prototype drivers invalidate readings even while wrapper/macro caches
+// retain plausible numeric values. Never fall back to those stale caches.
+FakeWebSocket.instance.emit("message", { data: JSON.stringify({
+  jsonrpc: "2.0", method: "notify_status_update", params: [{
+    "bme280 BME_IN": {valid: false, temperature: 36.7, pressure: 1008.42, humidity: 31.2},
+    "sgp40 SGP_IN": {valid: false, gas: 164},
+  }, 100],
+}) });
+assert(byId("tempIn").textContent === "—", "Invalid BME reading fell back to cached temperature");
+assert(byId("vocIn").textContent === "—", "Invalid VOC reading fell back to cached index");
+assert(byId("pressureIn").textContent === "—", "Invalid pressure remained visible");
+assert(byId("vocStatePill").textContent === "UNAVAILABLE", "Missing VOC looked like clean air");
+assert(byId("efficiency").textContent === "—", "Efficiency used stale sensor values");
+FakeWebSocket.instance.emit("message", { data: JSON.stringify({
+  jsonrpc: "2.0", method: "notify_status_update", params: [{
+    "bme280 BME_IN": {valid: true, temperature: 29, pressure: 1000, humidity: 40},
+    "sgp40 SGP_IN": {valid: true, gas: 75},
+  }, 101],
+}) });
+assert(byId("tempIn").textContent === "29.0", "Recovered driver temperature did not take precedence");
+assert(byId("vocIn").textContent === "75", "Recovered driver VOC did not take precedence");
 dom.window.close();
 console.log("Control runtime verified guarded outputs plus unattended SGP40 calibration start, progress, lockout, and cancel.");
